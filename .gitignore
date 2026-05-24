@@ -27,3 +27,4 @@ desktop.ini
 # Temporary files
 /tmp/
 *.tmp
+scripts/__pycache__/
