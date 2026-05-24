@@ -1,0 +1,216 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["aiohttp", "PyYAML"]
+# ///
+"""
+maishou_search.py - 国内电商全网比价脚本
+基于买手 88 API (appapi.maishou88.com) 查询国内平台商品价格、店铺、销量
+
+使用方法:
+    python maishou_search.py search --source=0 --keyword='电脑机箱'
+    python maishou_search.py search --source=2 --keyword='电脑机箱' --limit 10 --format json
+    python maishou_search.py detail --source=2 --id='100012345678'
+
+参数说明:
+    search  : 搜索商品
+      --keyword  : 搜索关键词（必填）
+      --source   : 平台 (0=全部 1=淘宝 2=京东 3=拼多多 4=苏宁 5=唯品会 6=考拉 7=抖音 8=快手 10=1688)
+      --page     : 分页 (默认 1)
+      --limit    : 返回数量限制 (默认 0=不限)
+      --format   : 输出格式 (csv/table/json, 默认 csv)
+    detail  : 获取商品详情
+      --id       : 商品ID (goodsId)
+      --source   : 平台编号 (同上)
+      --format   : 输出格式 (yaml/json, 默认 yaml)
+"""
+import io
+import csv
+import json
+import yaml
+import asyncio
+import aiohttp
+import argparse
+
+from maishou_common import (
+    SEARCH_URL, DETAIL_URL, TARGET_URL,
+    SOURCE_MAP, TIMEOUT,
+    get_invite_code, get_openid, get_headers_app,
+    get_session, close_session, check_env, format_table,
+    search_api,
+)
+
+
+async def search_products(keyword: str, source: int = 0, func=None, **kwargs) -> str:
+    """搜索商品，返回格式化的结果字符串"""
+    session = await get_session()
+    items, error = await search_api(
+        session, keyword, source,
+        page=kwargs.get("page", 1),
+        limit=kwargs.get("limit", 0),
+    )
+
+    if error:
+        fmt = kwargs.get("format", "csv")
+        return json.dumps({"error": error}, ensure_ascii=False) if fmt == "json" else f"❌ {error}"
+
+    if not items:
+        msg = "查询结果为空"
+        return json.dumps({"error": msg}, ensure_ascii=False) if kwargs.get("format") == "json" else f"❌ {msg}"
+
+    rows = [
+        {
+            "idx": i,
+            "goodsId": v.get("goodsId"),
+            "source": v.get("sourceType"),
+            "title": v.get("title"),
+            "shopName": v.get("shopName"),
+            "originalPrice": v.get("originalPrice"),
+            "actualPrice": v.get("actualPrice"),
+            "couponPrice": v.get("couponPrice"),
+            "commission": v.get("commission"),
+            "monthSales": v.get("monthSales"),
+            "picUrl": v.get("picUrl"),
+        }
+        for i, v in enumerate(items, 1)
+    ]
+
+    limit = kwargs.get("limit", 0)
+    if limit > 0:
+        rows = rows[:limit]
+
+    fmt = kwargs.get("format", "csv")
+    if fmt == "json":
+        return json.dumps(rows, ensure_ascii=False, indent=2)
+    elif fmt == "table":
+        columns = {"#": 4, "商品名": 40, "价格": 10, "销量": 10, "店铺": 20}
+        display_rows = []
+        for r in rows:
+            display_rows.append({
+                "#": r["idx"],
+                "商品名": r.get("title", ""),
+                "价格": str(r.get("actualPrice") or r.get("originalPrice") or "?"),
+                "销量": str(r.get("monthSales", "")),
+                "店铺": (r.get("shopName") or ""),
+            })
+        return format_table(display_rows, columns)
+    else:  # csv
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        for item in rows:
+            writer.writerow(item)
+        text = output.getvalue()
+        output.close()
+        return text
+
+
+async def detail(id: str, source: int, func=None, **kwargs) -> str:
+    """获取商品详情"""
+    session = await get_session()
+
+    params = {
+        "goodsId": str(id),
+        "sourceType": str(source),
+        "inviteCode": get_invite_code(),
+        "supplierCode": "",
+        "activityId": "",
+        "isShare": "1",
+        "token": "",
+    }
+
+    for attempt in range(2):
+        try:
+            resp = await session.post(
+                DETAIL_URL,
+                json={**params, "keyword": "", "usageScene": 5},
+                headers=get_headers_app(),
+                timeout=TIMEOUT,
+            )
+            data = await resp.json(encoding="utf-8-sig") or {}
+            detail_data = data.get("data") or {}
+            break
+        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
+            if attempt == 0:
+                print(f"⚠️ 请求失败: {e}，3 秒后重试...")
+                await asyncio.sleep(3)
+            else:
+                return f"❌ 请求失败（已重试）: {e}"
+
+    try:
+        resp = await session.post(
+            TARGET_URL,
+            json={**params, "isDirectDetail": 0},
+            headers=get_headers_app(),
+            timeout=TIMEOUT,
+        )
+        data = await resp.json(encoding="utf-8-sig") or {}
+        info = data.get("data") or {}
+        if not info:
+            msg = data.get("message", "获取分享链接失败")
+            return f"❌ {msg}"
+    except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
+        print(f"⚠️ 获取分享链接失败，部分数据可能缺失: {e}")
+        info = {}
+
+    result = {
+        "商品标题": detail_data.get("title", ""),
+        "购买链接": info.get("appUrl") or info.get("schemaUrl"),
+        "复制口令": info.get("kl"),
+        "商品详情": detail_data,
+    }
+
+    fmt = kwargs.get("format", "yaml")
+    if fmt == "json":
+        return json.dumps(result, ensure_ascii=False, indent=2)
+    return yaml.dump(result, allow_unicode=True, sort_keys=False)
+
+
+async def main():
+    for warning in check_env():
+        print(warning)
+    if not get_invite_code():
+        print("❌ MAISHOU_API_KEY 未设置，detail 模式将无法正常工作，请先设置环境变量")
+
+    try:
+        parser = argparse.ArgumentParser(
+            description="国内电商全网比价（基于买手88 API）"
+        )
+        parsers = parser.add_subparsers()
+
+        search_parser = parsers.add_parser("search")
+        search_parser.add_argument("--keyword", required=True, help="搜索关键词")
+        search_parser.add_argument(
+            "--source", type=int, default=0,
+            help="平台 (0=全部 1=淘宝 2=京东 3=拼多多 4=苏宁 5=唯品会 6=考拉 7=抖音 8=快手 10=1688)"
+        )
+        search_parser.add_argument("--page", type=int, default=1, help="分页")
+        search_parser.add_argument("--limit", type=int, default=0, help="返回结果数量限制 (默认 0=不限)")
+        search_parser.add_argument(
+            "--format", choices=["csv", "table", "json"], default="csv",
+            help="输出格式 (默认 csv)"
+        )
+        search_parser.set_defaults(func=search_products)
+
+        detail_parser = parsers.add_parser("detail")
+        detail_parser.add_argument("--id", help="商品ID (goodsId)")
+        detail_parser.add_argument(
+            "--source", type=int, default=1,
+            help="平台 (1=淘宝 2=京东 3=拼多多 4=苏宁 5=唯品会 6=考拉 7=抖音 8=快手 10=1688)"
+        )
+        detail_parser.add_argument(
+            "--format", choices=["yaml", "json"], default="yaml",
+            help="输出格式 (默认 yaml)"
+        )
+        detail_parser.set_defaults(func=detail)
+
+        args = parser.parse_args()
+        if hasattr(args, "func"):
+            print(await args.func(**vars(args)))
+        else:
+            parser.print_help()
+    finally:
+        await close_session()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

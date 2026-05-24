@@ -1,0 +1,5 @@
+aiohttp>=3.9
+PyYAML>=6.0
+# 可选：兜底方案 browser-use（仅在 CDP 不可用时使用）
+# browser-use>=0.1
+# playwright
