@@ -76,16 +76,25 @@ def _sensitivity(calc_fn, base_kwargs: dict, variations: list[tuple]) -> dict:
     Args:
         calc_fn: 计算函数 (**kwargs) -> (profit: float, rate: float)
         base_kwargs: 基准参数字典
-        variations: [(场景名, 变动参数名, 乘数, 显示字段名, 额外显示), ...]
-                    其中 额外显示 为 dict 或 None
+        variations: [(场景名, 变动参数名, 值, 显示字段名, 额外显示[, is_absolute]), ...]
+                    - 值: 默认为乘数（如 1.10 表示 +10%）
+                    - is_absolute (可选 bool): True 时使用绝对值替换, 而非乘法
+                    - 额外显示 为 dict 或 None
 
     Returns:
         {场景名: {显示字段: 值, "利润": float, "利润率": str}}
     """
     results = {}
-    for name, param, multiplier, display_field, extra in variations:
+    for var in variations:
+        name = var[0]
+        param = var[1]
+        value = var[2]
+        display_field = var[3]
+        extra = var[4] if len(var) > 4 else None
+        is_absolute = var[5] if len(var) > 5 else False
+
         kw = dict(base_kwargs)
-        kw[param] = kw[param] * multiplier
+        kw[param] = value if is_absolute else kw[param] * value
         profit, rate = calc_fn(**kw)
         entry = {"利润": round(profit, 2), "利润率": f"{rate:.1f}%"}
         entry[display_field] = round(kw[param], 2)
@@ -122,7 +131,18 @@ def _worst_case(calc_fn, base_kwargs: dict, scenarios: list[dict]) -> dict:
 # ── 国内版 ──
 
 def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=None, platform=None):
-    """国内版利润计算"""
+    """国内版利润计算。
+
+    Args:
+        purchase_price: 采购价（元）
+        selling_price: 售价（元）
+        shipping: 运费（元），默认 0
+        commission_rate: 佣金率（小数，如 0.05=5%），优先于 platform
+        platform: 平台标识（jd/tmall/taobao/pdd/1688），自动推断佣金率
+
+    Returns:
+        dict: 包含利润、利润率、敏感度分析等字段
+    """
     if commission_rate is None and platform:
         commission_rate = DOMESTIC_COMMISSION.get(platform.lower(), 0.05)
     elif commission_rate is None:
@@ -149,9 +169,8 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
         ("运费 -20%", "sh", 0.80, "运费", None),
         ("采购价 +10%", "pp", 1.10, "采购价", None),
         ("采购价 -10%", "pp", 0.90, "采购价", None),
-        ("扣点率 +2pp", "cr", 1.40, "扣点率", {"扣点率%": f"{commission_rate*1.40*100:.1f}%"}),
-        ("扣点率 -2pp", "cr", 0.60, "扣点率", {"扣点率%": f"{commission_rate*0.60*100:.1f}%"}),
-    ]
+        ("扣点率 +2pp", "cr", commission_rate + 0.02, "扣点率", {"扣点率%": f"{(commission_rate + 0.02)*100:.1f}%"}, True),
+        ("扣点率 -2pp", "cr", max(0, commission_rate - 0.02), "扣点率", {"扣点率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"}, True),    ]
 
     sensitivity = _sensitivity(_calc, base, variations)
 
@@ -183,7 +202,22 @@ def calc_crossborder(
     shipping_usd=0, fba_fee=0, commission_rate=0.15, tax_rate=0, market="US",
     exchange_buffer=0.03,
 ):
-    """跨境版利润计算"""
+    """跨境版利润计算。
+
+    Args:
+        purchase_price_cny: 采购价（人民币元）
+        exchange_rate: 汇率（1 USD = ? CNY）
+        selling_price_usd: 售价（美元）
+        shipping_usd: 头程运费（美元），默认 0
+        fba_fee: FBA/平台物流费（美元），默认 0
+        commission_rate: 佣金率（小数），默认 0.15
+        tax_rate: 税率（小数），默认 0
+        market: 目标市场（US/DE/JP/UK），用于自动推断 tax_rate
+        exchange_buffer: 汇率浮动备用金比例（默认 0.03=3%）
+
+    Returns:
+        dict: 包含保本售价、利润、利润率、敏感度分析等字段
+    """
     purchase_price_usd = purchase_price_cny / exchange_rate
     buffer = purchase_price_usd * exchange_buffer
     unit_cost = purchase_price_usd + shipping_usd + fba_fee + buffer
@@ -226,9 +260,8 @@ def calc_crossborder(
         ("FBA费 -20%", "fba", 0.80, "FBA费", None),
         ("采购价 +10%", "pp_cny", 1.10, "采购价(CNY)", {"采购价(USD)": round(purchase_price_cny * 1.10 / exchange_rate, 2)}),
         ("采购价 -10%", "pp_cny", 0.90, "采购价(CNY)", {"采购价(USD)": round(purchase_price_cny * 0.90 / exchange_rate, 2)}),
-        ("佣金率 +2pp", "cr", 1.13, "佣金率", {"佣金率%": f"{commission_rate*1.13*100:.1f}%"}),
-        ("佣金率 -2pp", "cr", 0.87, "佣金率", {"佣金率%": f"{commission_rate*0.87*100:.1f}%"}),
-    ]
+        ("佣金率 +2pp", "cr", commission_rate + 0.02, "佣金率", {"佣金率%": f"{(commission_rate + 0.02)*100:.1f}%"}, True),
+        ("佣金率 -2pp", "cr", max(0, commission_rate - 0.02), "佣金率", {"佣金率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"}, True),    ]
 
     sensitivity = _sensitivity(_calc, base, variations)
 
@@ -286,6 +319,9 @@ def format_output(result, fmt="table"):
             max(_display_width(s) for s in sensitivity.keys()),
             12,
         ) + 2
+        # 确保列宽不低于最小内容宽度
+        scenario_width = max(scenario_width, 14)
+
         extra_width = max(
             max(
                 _display_width(" ".join(
@@ -296,6 +332,7 @@ def format_output(result, fmt="table"):
             ),
             20,
         ) + 2
+        extra_width = max(extra_width, 22)
 
         lines.append(f"\n  {'─'*max(40, scenario_width)}")
         lines.append(f"  📊 敏感度分析")

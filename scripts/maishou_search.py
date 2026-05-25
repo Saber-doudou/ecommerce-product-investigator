@@ -182,7 +182,7 @@ async def main():
         search_parser.set_defaults(func=search_products)
 
         detail_parser = parsers.add_parser("detail")
-        detail_parser.add_argument("--id", help="商品ID (goodsId)")
+        detail_parser.add_argument("--id", required=True, help="商品ID (goodsId)")
         detail_parser.add_argument(
             "--source", type=int, default=1,
             help="平台 (1=淘宝 2=京东 3=拼多多 4=苏宁 5=唯品会 6=考拉 7=抖音 8=快手 10=1688)"

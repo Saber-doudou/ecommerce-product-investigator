@@ -22,14 +22,22 @@ def _load_dotenv():
     if not env_path.exists():
         return
     with open(env_path, encoding="utf-8") as f:
-        for line in f:
+        for lineno, line in enumerate(f, 1):
             line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, value = line.partition("=")
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                if key and value:
-                    os.environ.setdefault(key, value)
+            # 跳过注释和空行
+            if not line or line.startswith("#"):
+                continue
+            # 处理 "export KEY=VALUE" 格式
+            if line.startswith("export "):
+                line = line[len("export "):].strip()
+            if "=" not in line:
+                logger.debug(f"跳过 .env 第 {lineno} 行: 格式无效")
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and value:
+                os.environ.setdefault(key, value)
 
 _load_dotenv()
 
@@ -77,13 +85,18 @@ HEADERS_BASE = {
 
 # ── Session 管理 ──
 _SESSION: aiohttp.ClientSession | None = None
+_SESSION_LOCK: asyncio.Lock | None = None
 
 
 async def get_session() -> aiohttp.ClientSession:
-    """懒加载单例 session"""
-    global _SESSION
+    """懒加载单例 session（线程安全）"""
+    global _SESSION, _SESSION_LOCK
     if _SESSION is None or _SESSION.closed:
-        _SESSION = aiohttp.ClientSession(headers=HEADERS_BASE, timeout=TIMEOUT)
+        if _SESSION_LOCK is None:
+            _SESSION_LOCK = asyncio.Lock()
+        async with _SESSION_LOCK:
+            if _SESSION is None or _SESSION.closed:
+                _SESSION = aiohttp.ClientSession(headers=HEADERS_BASE, timeout=TIMEOUT)
     return _SESSION
 
 
@@ -169,6 +182,7 @@ async def _retry_post(
             return data, None
         except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
             if attempt < max_attempts - 1:
+                logger.warning(f"重试第 {attempt+1}/{max_attempts} 次: {url} (错误: {e})")
                 await asyncio.sleep(3)
             else:
                 return {}, f"请求失败（已重试）: {e}"

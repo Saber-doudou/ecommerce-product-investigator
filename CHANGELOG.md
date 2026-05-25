@@ -4,6 +4,34 @@
 
 ---
 
+## [0.4.3] — 2026-05-26
+
+### 修复（P0 — 审查报告 v0.4.2）
+- **±2pp 佣金敏感度乘数→绝对值**：`_sensitivity()` 新增 `is_absolute` 参数，扣点率/佣金率 ±2pp 场景改用绝对值增量而非乘数。修复非默认佣金率平台（拼多多 0.6%、淘宝 0%）敏感度结果严重偏差的问题
+
+### 修复（P1）
+- **`--id required=True`**：maishou_search.py detail 子命令 --id 标记为必填
+- **docstring 补充 Args**：calc_domestic() 和 calc_crossborder() 补全参数文档
+- **京东佣金率文档一致**：domestic-guide.md 新增代码默认值与自营实际差异的警告
+- **`_retry_post()` 日志加 URL**：重试日志记录目标 URL 便于排查
+
+### 优化（P2）
+- **`__init__.py` fallback**：版本号解析失败时回退到 "0.0.0"
+- **`_load_dotenv()` 改进**：支持 `export KEY=VALUE` 格式；格式错误行输出行号日志
+- **delivery-summary.md 层级统一**：三个版本交付记录标题层级一致化
+- **Session 锁**：get_session() 加 `asyncio.Lock` 双重检查，防止并发创建泄漏
+- **format_output() 下限保护**：敏感度列宽计算加最小宽度保护
+
+### 文档
+- **crossborder-guide.md**：DE 市场 VAT 计算公式补充说明
+- **domestic-guide.md**：京东自营佣金实际 vs 代码默认值差异警告
+
+### 测试
+- **test_maishou_price.py**（+12）：format_csv 4 用例 + search_single_source 5 用例 + search_price 3 用例
+- 测试总数 46 → 58，全部通过
+
+---
+
 ## [0.4.2] — 2026-05-25
 
 ### 修复（P1 — 审查报告 v0.4.0）
