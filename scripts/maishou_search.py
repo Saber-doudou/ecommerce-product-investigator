@@ -28,8 +28,11 @@ import csv
 import json
 import yaml
 import asyncio
+import logging
 import aiohttp
 import argparse
+
+logger = logging.getLogger(__name__)
 
 from maishou_common import (
     SEARCH_URL, DETAIL_URL, TARGET_URL,
@@ -40,7 +43,7 @@ from maishou_common import (
 )
 
 
-async def search_products(keyword: str, source: int = 0, func=None, **kwargs) -> str:
+async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
     """搜索商品，返回格式化的结果字符串"""
     session = await get_session()
     items, error = await search_api(
@@ -104,7 +107,7 @@ async def search_products(keyword: str, source: int = 0, func=None, **kwargs) ->
         return text
 
 
-async def detail(id: str, source: int, func=None, **kwargs) -> str:
+async def detail(id: str, source: int, **kwargs) -> str:
     """获取商品详情"""
     session = await get_session()
 
@@ -131,7 +134,7 @@ async def detail(id: str, source: int, func=None, **kwargs) -> str:
             break
         except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
             if attempt == 0:
-                print(f"⚠️ 请求失败: {e}，3 秒后重试...")
+                logger.warning("请求失败: %s，3 秒后重试...", e)
                 await asyncio.sleep(3)
             else:
                 return f"❌ 请求失败（已重试）: {e}"
@@ -149,7 +152,7 @@ async def detail(id: str, source: int, func=None, **kwargs) -> str:
             msg = data.get("message", "获取分享链接失败")
             return f"❌ {msg}"
     except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
-        print(f"⚠️ 获取分享链接失败，部分数据可能缺失: {e}")
+        logger.warning("获取分享链接失败，部分数据可能缺失: %s", e)
         info = {}
 
     result = {
@@ -167,9 +170,9 @@ async def detail(id: str, source: int, func=None, **kwargs) -> str:
 
 async def main():
     for warning in check_env():
-        print(warning)
+        logger.warning(warning)
     if not get_invite_code():
-        print("❌ MAISHOU_API_KEY 未设置，detail 模式将无法正常工作，请先设置环境变量")
+        logger.warning("MAISHOU_API_KEY 未设置，detail 模式将无法正常工作")
 
     try:
         parser = argparse.ArgumentParser(
@@ -189,6 +192,7 @@ async def main():
             "--format", choices=["csv", "table", "json"], default="csv",
             help="输出格式 (默认 csv)"
         )
+        search_parser.add_argument("--output", help="输出文件路径 (可选)")
         search_parser.set_defaults(func=search_products)
 
         detail_parser = parsers.add_parser("detail")
@@ -201,11 +205,18 @@ async def main():
             "--format", choices=["yaml", "json"], default="yaml",
             help="输出格式 (默认 yaml)"
         )
+        detail_parser.add_argument("--output", help="输出文件路径 (可选)")
         detail_parser.set_defaults(func=detail)
 
         args = parser.parse_args()
         if hasattr(args, "func"):
-            print(await args.func(**vars(args)))
+            kwargs = {k: v for k, v in vars(args).items() if k not in ("func", "output")}
+            output_text = str(await args.func(**kwargs))
+            print(output_text)
+            if getattr(args, "output", None):
+                with open(args.output, "w", encoding="utf-8") as f:
+                    f.write(output_text)
+                print(f"\n📁 结果已保存到: {args.output}")
         else:
             parser.print_help()
     finally:
@@ -213,4 +224,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     asyncio.run(main())

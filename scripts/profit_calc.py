@@ -19,47 +19,12 @@ profit_calc.py - 电商利润计算器（国内版 + 跨境版）
 import argparse
 import json
 import sys
-import unicodedata
+import logging
+from datetime import datetime
 
+logger = logging.getLogger(__name__)
 
-# ── 本地 CJK 宽度工具（避免依赖 maishou_common → aiohttp） ──
-
-def _display_width(s: str) -> int:
-    """计算字符串终端显示宽度（CJK 字符占 2 列）"""
-    w = 0
-    for ch in s:
-        if unicodedata.east_asian_width(ch) in ("W", "F"):
-            w += 2
-        else:
-            w += 1
-    return w
-
-
-def _pad_str_local(s: str, width: int, align: str = "<") -> str:
-    """按显示宽度填充字符串"""
-    dw = _display_width(s)
-    if dw >= width:
-        result = ""
-        cur = 0
-        for ch in s:
-            chw = 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
-            if cur + chw > width:
-                remaining = width - cur
-                if remaining >= 1:
-                    result += "…"
-                break
-            result += ch
-            cur += chw
-        return result
-    padding = width - dw
-    if align == "<":
-        return s + " " * padding
-    elif align == ">":
-        return " " * padding + s
-    else:
-        left = padding // 2
-        right = padding - left
-        return " " * left + s + " " * right
+from text_utils import display_width as _display_width, pad_str as _pad_str_local
 
 
 # 国内平台佣金参考（截至 2026-05，请以平台官方最新费率为准）
@@ -71,6 +36,24 @@ DOMESTIC_COMMISSION = {
     "1688": 0.03,    # 1688 约 2-5%
 }
 COMMISSION_REF_DATE = "2026-05"
+_COMMISSION_STALENESS_MONTHS = 6
+
+
+def check_commission_staleness() -> list[str]:
+    """检查佣金率是否过期，返回警告列表"""
+    warnings = []
+    try:
+        ref = datetime.strptime(COMMISSION_REF_DATE, "%Y-%m")
+        now = datetime.now()
+        months = (now.year - ref.year) * 12 + (now.month - ref.month)
+        if months > _COMMISSION_STALENESS_MONTHS:
+            warnings.append(
+                f"⚠️ 佣金率参考日期为 {COMMISSION_REF_DATE}（已过 {months} 个月），"
+                f"请确认 DOMESTIC_COMMISSION / CROSSBORDER_COMMISSION 仍为最新费率"
+            )
+    except ValueError:
+        pass
+    return warnings
 
 # 跨境平台佣金参考（截至 2026-05，请以平台官方最新费率为准）
 CROSSBORDER_COMMISSION = {
@@ -305,13 +288,17 @@ def format_output(result, fmt="table"):
                 f"{k} {v}" for k, v in data.items()
                 if k not in ("利润", "利润率")
             )
-            lines.append(f"  {_pad_str_local(scenario, 20)} {extra:<40} 利润 {str(profit_v):<10} 利润率 {rate_v}")
+            line = f"  {_pad_str_local(scenario, 20)}  {_pad_str_local(extra, 40)}  利润 {_pad_str_local(str(profit_v), 10)}  利润率 {rate_v}"
+            lines.append(line)
 
     lines.append(f"{'='*50}\n")
     return "\n".join(lines)
 
 
 def main():
+    for warning in check_commission_staleness():
+        logger.warning(warning)
+
     parser = argparse.ArgumentParser(description="电商利润计算器（国内版 + 跨境版）")
     subparsers = parser.add_subparsers(dest="mode")
 
@@ -378,4 +365,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     main()

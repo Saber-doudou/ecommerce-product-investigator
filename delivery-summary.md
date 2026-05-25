@@ -1,12 +1,12 @@
-# ecommerce-product-investigator v0.3.4 修复交付总结
+# ecommerce-product-investigator v0.4.0 全量修复交付总结
 
-> 基于 Saber_lily 审查报告 v0.3.3 | 2026-05-23
+> 基于 Saber_lily 审查报告 v0.3.5 | 2026-05-25
 
 ---
 
 ## TL;DR
 
-审查报告 **16 项问题**已处理 **11 项**（P0 全部 + P1 除版本号双重维护外全部 + P2 快赢 3 项），版本升至 0.3.4。4 项 P2 建议和 1 项 P1 暂缓，列入下轮迭代。
+审查报告 v0.3.5 **14 项问题 100% 完成**（3 P0 + 5 P1 + 6 P2）。新增 4 个文件、修改 8 个文件、33 个单元测试全部通过。
 
 ---
 
@@ -14,11 +14,12 @@
 
 | 维度 | 数值 |
 |:---|:---|
-| **修复总数** | 11 项 |
+| **修复总数** | 14 项 |
 | **P0 修复** | 3/3 ✅ |
-| **P1 修复** | 5/6 ✅（P1-4 版本号双重维护暂缓） |
-| **P2 快赢** | 3/6 ✅ |
-| **变更文件** | 9 个（8 修改 + 1 新建） |
+| **P1 修复** | 5/5 ✅ |
+| **P2 优化** | 6/6 ✅ |
+| **变更文件** | 12 个（4 新建 + 8 修改） |
+| **单元测试** | 33 个全部通过 |
 | **语法检查** | 全部通过 |
 
 ---
@@ -27,22 +28,25 @@
 
 | 文件 | 变更类型 | 说明 |
 |:---|:---|:---|
-| `scripts/maishou_common.py` | 🔧 修改 | P0-1 环境变量函数化 + P1-1 中文宽度修复 |
-| `scripts/maishou_search.py` | 🔧 修改 | P0-2 data→json + P0-3 响应 fallback + P1-5/6 detail 修复 |
-| `scripts/maishou_price.py` | 🔧 修改 | P0-2/3 同步修复 |
-| `scripts/profit_calc.py` | 🔧 修改 | P1-2 跨境采购价敏感度 + P2-2 佣金率日期标注 |
-| `scripts/__init__.py` | 🔧 修改 | 版本号 0.3.3→0.3.4 |
-| `SKILL.md` | 🔧 修改 | 版本号 + P2-6 依赖说明 + .env.example 引用 |
-| `CHANGELOG.md` | 🔧 修改 | P1-3 0.3.1/0.3.2 拆分 + v0.3.4 条目 |
-| `references/domestic-guide.md` | 🔧 修改 | P1-7 日期表述修正 x2 |
-| `.env.example` | ➕ 新建 | P2-5 环境变量模板 |
+| `scripts/text_utils.py` | ➕ 新建 | CJK 宽度公共工具（P1-2 消除重复代码） |
+| `tests/__init__.py` | ➕ 新建 | 测试包初始化 |
+| `tests/test_profit_calc.py` | ➕ 新建 | 利润计算 17 个测试用例（P2-1） |
+| `tests/test_text_utils.py` | ➕ 新建 | CJK 工具 16 个测试用例（P2-1） |
+| `scripts/maishou_price.py` | 🔧 修改 | Bug-1 字段映射 + Bug-3 CJK 宽度 + P2-2 logging |
+| `scripts/maishou_search.py` | 🔧 修改 | P1-3 func 参数 + P2-2 logging + P2-3 --output |
+| `scripts/maishou_common.py` | 🔧 修改 | P1-2 从 text_utils 导入（删 35 行重复代码） |
+| `scripts/profit_calc.py` | 🔧 修改 | P1-1 CJK 对齐 + P1-2 导入 + P2-2 logging + P2-4 佣金过期提醒 |
+| `references/crossborder-guide.md` | 🔧 修改 | Bug-2 利润示例补汇率浮动备用金 $0.21 |
+| `SKILL.md` | 🔧 修改 | P2-5 frontmatter description 精简 |
+| `delivery-summary.md` | 🔧 修改 | 更新到 v0.3.5（全量） |
+| `CHANGELOG.md` | 🔧 修改 | P1-5 _EnvProxy 移除注记 |
 
 ---
 
 ## 用户下一步建议
 
-1. **提交到 GitHub**：`git add . && git commit -m "v0.3.4: 审查报告修复 (P0x3 P1x5 P2x3)" && git push`
+1. **提交到 GitHub**：`git add . && git commit -m "v0.3.5: 审查报告全量修复 (P0x3 P1x5 P2x6)" && git push`
 2. **重新注册 skill**：`ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator`
-3. **实测验证**：启动买手 API 确认 `json={}` 格式和响应结构 fallback 正常工作
-4. **下轮迭代**：P2-1 单元测试、P2-3 最坏场景分析、P2-4 _fmt_table 提取
-5. **关注 P0-3**：需通过真实 API 调用确认响应数据结构以移除 fallback 中的冗余分支
+3. **实测验证**：运行 `python maishou_price.py "手机支架" --format table` 确认价格列有数值
+4. **运行测试**：`pytest tests/ -v` 确认 33 个用例通过
+5. **版本号**：下次发版可升 v0.3.6（本次所有修改在 v0.3.5 框架内）

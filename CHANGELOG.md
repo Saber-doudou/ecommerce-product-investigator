@@ -4,6 +4,27 @@
 
 ---
 
+## [0.4.0] — 2026-05-25
+
+### 修复（P0 — 审查报告 v0.3.5）
+- **maishou_price.py 字段映射**：price→actualPrice/originalPrice, sales→monthSales, shop→shopName，修复价格列为空的 Bug
+- **crossborder-guide.md 利润示例**：补汇率浮动备用金 $0.21，与代码逻辑一致
+- **_fmt_table CJK 宽度**：len()→_display_width()，中文商品名表格不再错位
+
+### 修复（P1）
+- **profit_calc.py 敏感度行 CJK 对齐**：{extra:<40}→_pad_str_local
+- **提取 text_utils.py**：消除 maishou_common/profit_calc 间 35 行重复代码
+- **maishou_search.py func 参数**：删除未使用的 func=None，main() 过滤 kwargs
+- **delivery-summary.md**：更新到 v0.4.0
+- **CHANGELOG _EnvProxy**：0.3.4 条目加"已在 0.3.5 移除"注记
+
+### 优化（P2）
+- **单元测试**：新增 33 个用例（test_profit_calc.py + test_text_utils.py），pytest 全通过
+- **print→logging**：全部脚本警告统一走 logging 模块
+- **maishou_search.py --output**：搜索结果支持文件输出
+- **佣金率过期提醒**：COMMISSION_REF_DATE 超 6 个月自动 warn
+- **SKILL.md frontmatter**：description 精简（~200→~100 字符）
+
 ## [0.3.5] — 2026-05-24
 
 ### 架构重构
@@ -37,6 +58,7 @@
 
 ### 修复（P0）
 - **环境变量 import 时固化**：`maishou_common.py` 的 `INVITE_CODE`/`OPENID`/`HEADERS_APP` 改为函数动态获取，支持运行时 `.env` 加载。通过 `_EnvProxy` 代理保持向后兼容
+  > 注：`_EnvProxy` 已在 0.3.5 中移除。
 - **search API 请求格式统一**：`maishou_search.py` 从 `data={}`(Form) 改为 `json={}`，与 `maishou_price.py` 一致
 - **API 响应结构兼容**：两个脚本对 search 接口响应添加双向解析 fallback（`data.list` / `data` 数组）
 

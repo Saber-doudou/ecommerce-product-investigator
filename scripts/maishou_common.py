@@ -9,10 +9,11 @@ maishou_common.py - 买手 88 API 公共模块
 
 import os
 import json
-import unicodedata
 import asyncio
 from pathlib import Path
 import aiohttp
+
+from text_utils import display_width as _display_width, pad_str as _pad_str
 
 # ── 自动加载 .env 文件 ──
 def _load_dotenv():
@@ -103,45 +104,6 @@ def check_env():
     if not get_invite_code():
         warnings.append("⚠️ MAISHOU_API_KEY 未设置，商品详情接口可能受限")
     return warnings
-
-
-def _display_width(s: str) -> int:
-    """计算字符串的终端显示宽度（CJK 字符占 2 列，ASCII 占 1 列）"""
-    w = 0
-    for ch in s:
-        if unicodedata.east_asian_width(ch) in ("W", "F"):
-            w += 2
-        else:
-            w += 1
-    return w
-
-
-def _pad_str(s: str, width: int, align: str = "<") -> str:
-    """按显示宽度填充字符串，解决中英文混排对齐问题"""
-    dw = _display_width(s)
-    if dw >= width:
-        # 截断到目标宽度，用 … 占位
-        result = ""
-        cur = 0
-        for ch in s:
-            chw = 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
-            if cur + chw > width:
-                remaining = width - cur
-                if remaining >= 1:
-                    result += "…"
-                break
-            result += ch
-            cur += chw
-        return result
-    padding = width - dw
-    if align == "<":
-        return s + " " * padding
-    elif align == ">":
-        return " " * padding + s
-    else:  # "^" center
-        left = padding // 2
-        right = padding - left
-        return " " * left + s + " " * right
 
 
 def format_table(rows: list[dict], columns: dict[str, int]) -> str:

@@ -23,11 +23,15 @@ import io
 import csv
 import json
 import asyncio
+import logging
 import aiohttp
 import argparse
 
+logger = logging.getLogger(__name__)
+
 from maishou_common import (
     SEARCH_URL, SOURCE_MAP, TIMEOUT,
+    _display_width,
     get_openid, get_headers_app,
     get_session, close_session, check_env, format_table,
     search_api,
@@ -41,17 +45,17 @@ async def search_single_source(
     """搜索单个平台"""
     items, error = await search_api(session, keyword, src, page=page, limit=limit)
     if error:
-        print(f"⚠️ 平台 {SOURCE_MAP.get(src, src)} 查询失败: {error}")
+        logger.warning("平台 %s 查询失败: %s", SOURCE_MAP.get(src, src), error)
         return []
 
     return [
         {
             "title": item.get("title", ""),
-            "price": item.get("price", ""),
+            "price": item.get("actualPrice") or item.get("originalPrice") or "",
             "platform": SOURCE_MAP.get(src, f"平台{src}"),
-            "url": item.get("url", ""),
-            "sales": item.get("sales", ""),
-            "shop": item.get("shop", ""),
+            "url": "",  # API 不直接返回购买链接，需通过 detail 接口获取
+            "sales": item.get("monthSales", ""),
+            "shop": item.get("shopName", ""),
         }
         for item in items[:limit]
     ]
@@ -87,7 +91,7 @@ async def search_price(keyword: str, source: int = 0, limit: int = 10, page: int
         if isinstance(item, list):
             results.extend(item)
         elif isinstance(item, Exception):
-            print(f"⚠️ 并发查询异常: {item}")
+            logger.warning("并发查询异常: %s", item)
 
     return results
 
@@ -108,7 +112,7 @@ def format_csv(results: list[dict], output: io.StringIO | None = None) -> str:
 
 async def main():
     for warning in check_env():
-        print(warning)
+        logger.warning(warning)
 
     try:
         parser = argparse.ArgumentParser(description="跨境选品采购价查询")
@@ -128,7 +132,7 @@ async def main():
         def _fmt_table(res):
             if not res:
                 return "未找到结果"
-            title_width = max(20, max(len(r["title"]) for r in res))
+            title_width = max(20, max(_display_width(r["title"]) for r in res))
             columns = {"序号": 4, "商品名": title_width, "价格": 10, "平台": 8, "销量": 10}
             display_rows = [
                 {"序号": i, "商品名": r["title"], "价格": r["price"], "平台": r["platform"], "销量": str(r.get("sales", ""))}
@@ -160,4 +164,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     asyncio.run(main())

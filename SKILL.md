@@ -1,7 +1,7 @@
 ---
 name: ecommerce-product-investigator
-version: 0.3.5
-description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。触发词：选品/查竞品/对比商品/利润计算/BSR查询/差评分析/入场评估/这个品能不能做/值不值得做/蓝海选品/1688比价/产品调研/市场调研/盈亏分析/FBA利润/产品深度分析/类目分析/新品机会/测款分析/1688货源/采购价查询
+version: 0.4.0
+description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。
 agent_created: true
 ---
 
