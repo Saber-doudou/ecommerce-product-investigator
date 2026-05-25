@@ -136,6 +136,45 @@ def format_table(rows: list[dict], columns: dict[str, int]) -> str:
     return "\n".join(lines)
 
 
+# ── 统一 POST 重试 ──
+
+async def _retry_post(
+    session: aiohttp.ClientSession,
+    url: str,
+    json_payload: dict,
+    headers: dict | None = None,
+    max_attempts: int = 2,
+) -> tuple[dict, str | None]:
+    """
+    通用 POST 请求带重试，返回 (响应JSON数据, 错误信息)。
+
+    Args:
+        session: aiohttp session
+        url: 请求 URL
+        json_payload: POST body
+        headers: 请求头（默认用 get_headers_app()）
+        max_attempts: 最大尝试次数（默认 2）
+
+    Returns:
+        (data: dict, error: str | None)  — error 为 None 表示成功
+    """
+    if headers is None:
+        headers = get_headers_app()
+
+    for attempt in range(max_attempts):
+        try:
+            resp = await session.post(url, json=json_payload, headers=headers, timeout=TIMEOUT)
+            resp.raise_for_status()
+            data = await resp.json(encoding="utf-8-sig") or {}
+            return data, None
+        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
+            if attempt < max_attempts - 1:
+                await asyncio.sleep(3)
+            else:
+                return {}, f"请求失败（已重试）: {e}"
+    return {}, "未知错误"
+
+
 # ── 统一搜索 API ──
 async def search_api(
     session: aiohttp.ClientSession,
@@ -171,34 +210,20 @@ async def search_api(
     if limit > 0:
         payload["limit"] = limit
 
-    for attempt in range(2):
-        try:
-            resp = await session.post(
-                SEARCH_URL,
-                headers=get_headers_app(),
-                json=payload,
-                timeout=TIMEOUT,
-            )
-            resp.raise_for_status()
-            data = await resp.json(encoding="utf-8-sig")
+    data, error = await _retry_post(session, SEARCH_URL, payload)
+    if error:
+        return [], error
 
-            if data.get("code") == 200:
-                raw = data.get("data")
-                # 双向兼容：data 直接是数组，或 data.list / data.items
-                if isinstance(raw, list):
-                    items = raw
-                elif isinstance(raw, dict):
-                    items = raw.get("list") or raw.get("items") or []
-                else:
-                    items = []
-                return items, None
-            else:
-                msg = data.get("message", f"API 返回异常 code={data.get('code')}")
-                return [], msg
-        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
-            if attempt == 0:
-                await asyncio.sleep(3)
-            else:
-                return [], f"请求失败（已重试）: {e}"
-
-    return [], "未知错误"
+    if data.get("code") == 200:
+        raw = data.get("data")
+        # 双向兼容：data 直接是数组，或 data.list / data.items
+        if isinstance(raw, list):
+            items = raw
+        elif isinstance(raw, dict):
+            items = raw.get("list") or raw.get("items") or []
+        else:
+            items = []
+        return items, None
+    else:
+        msg = data.get("message", f"API 返回异常 code={data.get('code')}")
+        return [], msg

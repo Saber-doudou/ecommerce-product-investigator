@@ -39,7 +39,7 @@ from maishou_common import (
     SOURCE_MAP, TIMEOUT,
     get_invite_code, get_openid, get_headers_app,
     get_session, close_session, check_env, format_table,
-    search_api,
+    search_api, _retry_post,
 )
 
 
@@ -121,39 +121,25 @@ async def detail(id: str, source: int, **kwargs) -> str:
         "token": "",
     }
 
-    for attempt in range(2):
-        try:
-            resp = await session.post(
-                DETAIL_URL,
-                json={**params, "keyword": "", "usageScene": 5},
-                headers=get_headers_app(),
-                timeout=TIMEOUT,
-            )
-            data = await resp.json(encoding="utf-8-sig") or {}
-            detail_data = data.get("data") or {}
-            break
-        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
-            if attempt == 0:
-                logger.warning("请求失败: %s，3 秒后重试...", e)
-                await asyncio.sleep(3)
-            else:
-                return f"❌ 请求失败（已重试）: {e}"
+    # 第一步：获取商品详情
+    data, error = await _retry_post(
+        session, DETAIL_URL,
+        {**params, "keyword": "", "usageScene": 5},
+    )
+    if error:
+        return f"❌ {error}"
+    detail_data = (data.get("data") or {}) if isinstance(data, dict) else {}
 
-    try:
-        resp = await session.post(
-            TARGET_URL,
-            json={**params, "isDirectDetail": 0},
-            headers=get_headers_app(),
-            timeout=TIMEOUT,
-        )
-        data = await resp.json(encoding="utf-8-sig") or {}
-        info = data.get("data") or {}
-        if not info:
-            msg = data.get("message", "获取分享链接失败")
-            return f"❌ {msg}"
-    except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
-        logger.warning("获取分享链接失败，部分数据可能缺失: %s", e)
-        info = {}
+    # 第二步：获取分享链接（非致命，失败只警告）
+    data2, err2 = await _retry_post(
+        session, TARGET_URL,
+        {**params, "isDirectDetail": 0},
+    )
+    info = (data2.get("data") or {}) if isinstance(data2, dict) else {}
+    if err2:
+        logger.warning("获取分享链接失败，部分数据可能缺失: %s", err2)
+    elif not info and isinstance(data2, dict) and data2.get("message"):
+        logger.warning("获取分享链接失败: %s", data2.get("message"))
 
     result = {
         "商品标题": detail_data.get("title", ""),

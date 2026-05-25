@@ -123,10 +123,10 @@ class TestCalcCrossborder:
         assert "售价 +10%" in sa
         assert "汇率 +5%（人民币贬值）" in sa
         assert "采购价 +10%" in sa
-        assert "最坏场景（售价 -10% + 汇率 -5%）" in sa
+        assert "最坏场景（售价 -10% + 人民币升值5%）" in sa
 
         # 最坏场景利润应远低于当前
-        worst = sa["最坏场景（售价 -10% + 汇率 -5%）"]
+        worst = sa["最坏场景（售价 -10% + 人民币升值5%）"]
         assert worst["利润"] < sa["当前"]["利润"]
 
 

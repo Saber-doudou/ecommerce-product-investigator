@@ -1,6 +1,6 @@
 ---
 name: ecommerce-product-investigator
-version: 0.4.0
+version: 0.4.2
 description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。
 agent_created: true
 ---
@@ -232,6 +232,7 @@ ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator
 ```bash
 python scripts/maishou_search.py search --source=0 --keyword='<商品名>'
 python scripts/maishou_search.py search --source=2 --keyword='<商品名>' --limit 10 --format json
+python scripts/maishou_search.py search --source=2 --keyword='<商品名>' --output result.csv
 python scripts/maishou_search.py detail --source=2 --id='<goodsId>'
 ```
 

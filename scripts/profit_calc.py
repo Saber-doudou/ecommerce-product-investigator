@@ -149,6 +149,8 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
         ("运费 -20%", "sh", 0.80, "运费", None),
         ("采购价 +10%", "pp", 1.10, "采购价", None),
         ("采购价 -10%", "pp", 0.90, "采购价", None),
+        ("扣点率 +2pp", "cr", 1.40, "扣点率", {"扣点率%": f"{commission_rate*1.40*100:.1f}%"}),
+        ("扣点率 -2pp", "cr", 0.60, "扣点率", {"扣点率%": f"{commission_rate*0.60*100:.1f}%"}),
     ]
 
     sensitivity = _sensitivity(_calc, base, variations)
@@ -224,6 +226,8 @@ def calc_crossborder(
         ("FBA费 -20%", "fba", 0.80, "FBA费", None),
         ("采购价 +10%", "pp_cny", 1.10, "采购价(CNY)", {"采购价(USD)": round(purchase_price_cny * 1.10 / exchange_rate, 2)}),
         ("采购价 -10%", "pp_cny", 0.90, "采购价(CNY)", {"采购价(USD)": round(purchase_price_cny * 0.90 / exchange_rate, 2)}),
+        ("佣金率 +2pp", "cr", 1.13, "佣金率", {"佣金率%": f"{commission_rate*1.13*100:.1f}%"}),
+        ("佣金率 -2pp", "cr", 0.87, "佣金率", {"佣金率%": f"{commission_rate*0.87*100:.1f}%"}),
     ]
 
     sensitivity = _sensitivity(_calc, base, variations)
@@ -231,7 +235,7 @@ def calc_crossborder(
     # 最坏场景：售价 -10% + 汇率 +5%（人民币贬值）
     ex_down_5 = exchange_rate * 0.95
     worst = _worst_case(_calc, base, [
-        {"name": "最坏场景（售价 -10% + 汇率 -5%）",
+        {"name": "最坏场景（售价 -10% + 人民币升值5%）",
          "params": {"sp_usd": 0.90, "ex_r": 0.95},
          "display": {"售价": round(selling_price_usd * 0.90, 2), "汇率": round(ex_down_5, 2)}},
     ])
@@ -277,9 +281,25 @@ def format_output(result, fmt="table"):
     # 敏感度分析
     sensitivity = result.get("敏感度分析", {})
     if sensitivity:
-        lines.append(f"\n  {'─'*40}")
+        # 动态计算列宽：根据实际内容的最大显示宽度 + 2 余量
+        scenario_width = max(
+            max(_display_width(s) for s in sensitivity.keys()),
+            12,
+        ) + 2
+        extra_width = max(
+            max(
+                _display_width(" ".join(
+                    f"{k} {v}" for k, v in data.items()
+                    if k not in ("利润", "利润率")
+                ))
+                for data in sensitivity.values()
+            ),
+            20,
+        ) + 2
+
+        lines.append(f"\n  {'─'*max(40, scenario_width)}")
         lines.append(f"  📊 敏感度分析")
-        lines.append(f"  {'─'*40}")
+        lines.append(f"  {'─'*max(40, scenario_width)}")
         for scenario, data in sensitivity.items():
             profit_v = data.get("利润", "?")
             rate_v = data.get("利润率", "?")
@@ -288,7 +308,7 @@ def format_output(result, fmt="table"):
                 f"{k} {v}" for k, v in data.items()
                 if k not in ("利润", "利润率")
             )
-            line = f"  {_pad_str_local(scenario, 20)}  {_pad_str_local(extra, 40)}  利润 {_pad_str_local(str(profit_v), 10)}  利润率 {rate_v}"
+            line = f"  {_pad_str_local(scenario, scenario_width)}  {_pad_str_local(extra, extra_width)}  利润 {_pad_str_local(str(profit_v), 10)}  利润率 {rate_v}"
             lines.append(line)
 
     lines.append(f"{'='*50}\n")

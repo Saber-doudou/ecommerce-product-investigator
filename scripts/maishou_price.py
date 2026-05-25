@@ -31,11 +31,12 @@ logger = logging.getLogger(__name__)
 
 from maishou_common import (
     SEARCH_URL, SOURCE_MAP, TIMEOUT,
-    _display_width,
     get_openid, get_headers_app,
     get_session, close_session, check_env, format_table,
     search_api,
 )
+
+from text_utils import display_width
 
 
 async def search_single_source(
@@ -132,7 +133,7 @@ async def main():
         def _fmt_table(res):
             if not res:
                 return "未找到结果"
-            title_width = max(20, max(_display_width(r["title"]) for r in res))
+            title_width = max(20, max(display_width(r["title"]) for r in res))
             columns = {"序号": 4, "商品名": title_width, "价格": 10, "平台": 8, "销量": 10}
             display_rows = [
                 {"序号": i, "商品名": r["title"], "价格": r["price"], "平台": r["platform"], "销量": str(r.get("sales", ""))}

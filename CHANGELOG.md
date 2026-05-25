@@ -4,6 +4,43 @@
 
 ---
 
+## [0.4.2] — 2026-05-25
+
+### 修复（P1 — 审查报告 v0.4.0）
+- **提取 _retry_post()**：maishou_common.py 新增通用 POST 重试函数，search_api() 和 detail() 均复用，消除 20+ 行重复重试代码
+
+### 优化（P2）
+- **敏感度列宽动态计算**：profit_calc.py format_output() 根据实际内容 display_width 动态计算列宽，长 CJK 场景名不再被截断
+- **conftest.py**：统一 tests/ sys.path 设置，新增测试无需重复写 import 路径
+- **requirements-dev.txt**：pytest + pytest-asyncio 开发依赖
+
+### 测试
+- **test_maishou_common.py**（+7）：format_table 空/单行/CJK/多列测试 + check_env 测试
+- **test_maishou_search.py**（+6）：detail() 全成功/API失败/非致命降级/字段提取/YAML/JSON 格式
+- 测试总数 33 → 46，全部通过
+
+---
+
+## [0.4.1] — 2026-05-25
+
+### 修复（P0 — 审查报告 v0.4.0）
+- **profit_calc.py 佣金敏感度**：国内版新增扣点率 ±2pp 场景，跨境版新增佣金率 ±2pp 场景
+- **跨境最坏场景命名**："汇率 -5%" → "人民币升值5%"，与 variations 命名一致，消除歧义
+
+### 修复（P1）
+- **_display_width 导入规范**：maishou_price.py 直接从 text_utils 导入 display_width，不再跨模块导入下划线前缀符号
+- **SKILL.md 补文档**：maishou_search.py 用法示例补充 --output 参数
+
+### 优化（P2）
+- **crossborder-guide.md**：US 示例后补充 DE 市场（19% VAT）对比示例，展示 VAT 对利润的巨大影响
+- **delivery-summary.md**：修正版本号残留文字（v0.3.6 → v0.4.1）
+
+### 测试
+- test_profit_calc.py 同步更新最坏场景命名断言
+- 全部 33 个测试通过
+
+---
+
 ## [0.4.0] — 2026-05-25
 
 ### 修复（P0 — 审查报告 v0.3.5）
