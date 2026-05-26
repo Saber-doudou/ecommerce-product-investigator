@@ -20,11 +20,12 @@ import argparse
 import json
 import sys
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-from text_utils import display_width as _display_width, pad_str as _pad_str_local
+from text_utils import display_width, pad_str as _pad_str_local
 
 
 # 国内平台佣金参考（截至 2026-05，请以平台官方最新费率为准）
@@ -69,38 +70,39 @@ MARKET_TAX = {"US": 0.0, "DE": 0.19, "JP": 0.10, "UK": 0.20}
 
 # ── 敏感度分析工具 ──
 
-def _sensitivity(calc_fn, base_kwargs: dict, variations: list[tuple]) -> dict:
+@dataclass
+class SensitivityVariation:
+    """敏感度分析单个变动维度，替代位置元组，字段语义明确"""
+    name: str           # 场景名（如 "售价 +10%"）
+    param: str          # 变动参数名（如 "sp"）
+    value: float        # 变动值（默认乘数，如 1.10；is_absolute=True 时为绝对值）
+    display_field: str  # 输出时显示的字段名
+    extra: dict | None = None     # 额外显示的键值对
+    is_absolute: bool = False     # True 时 value 为绝对值替换（如佣金率 +0.02），而非乘法
+
+
+def _sensitivity(calc_fn, base_kwargs: dict, variations: list[SensitivityVariation]) -> dict:
     """
     通用敏感度分析。
 
     Args:
         calc_fn: 计算函数 (**kwargs) -> (profit: float, rate: float)
         base_kwargs: 基准参数字典
-        variations: [(场景名, 变动参数名, 值, 显示字段名, 额外显示[, is_absolute]), ...]
-                    - 值: 默认为乘数（如 1.10 表示 +10%）
-                    - is_absolute (可选 bool): True 时使用绝对值替换, 而非乘法
-                    - 额外显示 为 dict 或 None
+        variations: SensitivityVariation 列表，每个元素定义一种敏感度场景
 
     Returns:
         {场景名: {显示字段: 值, "利润": float, "利润率": str}}
     """
     results = {}
     for var in variations:
-        name = var[0]
-        param = var[1]
-        value = var[2]
-        display_field = var[3]
-        extra = var[4] if len(var) > 4 else None
-        is_absolute = var[5] if len(var) > 5 else False
-
         kw = dict(base_kwargs)
-        kw[param] = value if is_absolute else kw[param] * value
+        kw[var.param] = var.value if var.is_absolute else kw[var.param] * var.value
         profit, rate = calc_fn(**kw)
         entry = {"利润": round(profit, 2), "利润率": f"{rate:.1f}%"}
-        entry[display_field] = round(kw[param], 2)
-        if extra:
-            entry.update(extra)
-        results[name] = entry
+        entry[var.display_field] = round(kw[var.param], 2)
+        if var.extra:
+            entry.update(var.extra)
+        results[var.name] = entry
     return results
 
 
@@ -162,15 +164,24 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
 
     base = {"pp": purchase_price, "sp": selling_price, "sh": shipping, "cr": commission_rate}
     variations = [
-        ("售价 +10%", "sp", 1.10, "售价", None),
-        ("当前",     "sp", 1.00, "售价", None),
-        ("售价 -10%", "sp", 0.90, "售价", None),
-        ("运费 +20%", "sh", 1.20, "运费", None),
-        ("运费 -20%", "sh", 0.80, "运费", None),
-        ("采购价 +10%", "pp", 1.10, "采购价", None),
-        ("采购价 -10%", "pp", 0.90, "采购价", None),
-        ("扣点率 +2pp", "cr", commission_rate + 0.02, "扣点率", {"扣点率%": f"{(commission_rate + 0.02)*100:.1f}%"}, True),
-        ("扣点率 -2pp", "cr", max(0, commission_rate - 0.02), "扣点率", {"扣点率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"}, True),    ]
+        SensitivityVariation("售价 +10%", "sp", 1.10, "售价"),
+        SensitivityVariation("当前", "sp", 1.00, "售价"),
+        SensitivityVariation("售价 -10%", "sp", 0.90, "售价"),
+        SensitivityVariation("运费 +20%", "sh", 1.20, "运费"),
+        SensitivityVariation("运费 -20%", "sh", 0.80, "运费"),
+        SensitivityVariation("采购价 +10%", "pp", 1.10, "采购价"),
+        SensitivityVariation("采购价 -10%", "pp", 0.90, "采购价"),
+        SensitivityVariation(
+            "扣点率 +2pp", "cr", commission_rate + 0.02, "扣点率",
+            extra={"扣点率%": f"{(commission_rate + 0.02)*100:.1f}%"},
+            is_absolute=True,
+        ),
+        SensitivityVariation(
+            "扣点率 -2pp", "cr", max(0, commission_rate - 0.02), "扣点率",
+            extra={"扣点率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"},
+            is_absolute=True,
+        ),
+    ]
 
     sensitivity = _sensitivity(_calc, base, variations)
 
@@ -199,7 +210,8 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
 
 def calc_crossborder(
     purchase_price_cny, exchange_rate, selling_price_usd,
-    shipping_usd=0, fba_fee=0, commission_rate=0.15, tax_rate=0, market="US",
+    shipping_usd=0, fba_fee=0, commission_rate=None, tax_rate=None,
+    platform=None, market="US",
     exchange_buffer=0.03,
 ):
     """跨境版利润计算。
@@ -210,14 +222,25 @@ def calc_crossborder(
         selling_price_usd: 售价（美元）
         shipping_usd: 头程运费（美元），默认 0
         fba_fee: FBA/平台物流费（美元），默认 0
-        commission_rate: 佣金率（小数），默认 0.15
-        tax_rate: 税率（小数），默认 0
+        commission_rate: 佣金率（小数），默认由 platform 自动推断（None 时启用）
+        tax_rate: 税率（小数），默认由 market 自动推断（None 时启用）
+        platform: 跨境平台（amazon/shopee/tiktok/temu），用于自动推断佣金率
         market: 目标市场（US/DE/JP/UK），用于自动推断 tax_rate
         exchange_buffer: 汇率浮动备用金比例（默认 0.03=3%）
 
     Returns:
         dict: 包含保本售价、利润、利润率、敏感度分析等字段
     """
+    # 自动推断佣金率：platform → commission_rate（仅在 commission_rate 未显式指定时生效）
+    if commission_rate is None and platform:
+        commission_rate = CROSSBORDER_COMMISSION.get(platform.lower(), 0.15)
+    elif commission_rate is None:
+        commission_rate = 0.15
+
+    # 自动推断税率：market → tax_rate（仅在 tax_rate 未显式指定时生效）
+    if tax_rate is None:
+        tax_rate = MARKET_TAX.get(market.upper(), 0.0)
+
     purchase_price_usd = purchase_price_cny / exchange_rate
     buffer = purchase_price_usd * exchange_buffer
     unit_cost = purchase_price_usd + shipping_usd + fba_fee + buffer
@@ -249,19 +272,40 @@ def calc_crossborder(
     }
 
     variations = [
-        ("售价 +10%", "sp_usd", 1.10, "售价", None),
-        ("当前",     "sp_usd", 1.00, "售价", None),
-        ("售价 -10%", "sp_usd", 0.90, "售价", None),
-        ("汇率 +5%（人民币贬值）", "ex_r", 1.05, "汇率", {"采购价(USD)": round(purchase_price_cny / (exchange_rate * 1.05), 2)}),
-        ("汇率 -5%（人民币升值）", "ex_r", 0.95, "汇率", {"采购价(USD)": round(purchase_price_cny / (exchange_rate * 0.95), 2)}),
-        ("运费 +20%", "ship", 1.20, "运费", None),
-        ("运费 -20%", "ship", 0.80, "运费", None),
-        ("FBA费 +20%", "fba", 1.20, "FBA费", None),
-        ("FBA费 -20%", "fba", 0.80, "FBA费", None),
-        ("采购价 +10%", "pp_cny", 1.10, "采购价(CNY)", {"采购价(USD)": round(purchase_price_cny * 1.10 / exchange_rate, 2)}),
-        ("采购价 -10%", "pp_cny", 0.90, "采购价(CNY)", {"采购价(USD)": round(purchase_price_cny * 0.90 / exchange_rate, 2)}),
-        ("佣金率 +2pp", "cr", commission_rate + 0.02, "佣金率", {"佣金率%": f"{(commission_rate + 0.02)*100:.1f}%"}, True),
-        ("佣金率 -2pp", "cr", max(0, commission_rate - 0.02), "佣金率", {"佣金率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"}, True),    ]
+        SensitivityVariation("售价 +10%", "sp_usd", 1.10, "售价"),
+        SensitivityVariation("当前", "sp_usd", 1.00, "售价"),
+        SensitivityVariation("售价 -10%", "sp_usd", 0.90, "售价"),
+        SensitivityVariation(
+            "汇率 +5%（人民币贬值）", "ex_r", 1.05, "汇率",
+            extra={"采购价(USD)": round(purchase_price_cny / (exchange_rate * 1.05), 2)},
+        ),
+        SensitivityVariation(
+            "汇率 -5%（人民币升值）", "ex_r", 0.95, "汇率",
+            extra={"采购价(USD)": round(purchase_price_cny / (exchange_rate * 0.95), 2)},
+        ),
+        SensitivityVariation("运费 +20%", "ship", 1.20, "运费"),
+        SensitivityVariation("运费 -20%", "ship", 0.80, "运费"),
+        SensitivityVariation("FBA费 +20%", "fba", 1.20, "FBA费"),
+        SensitivityVariation("FBA费 -20%", "fba", 0.80, "FBA费"),
+        SensitivityVariation(
+            "采购价 +10%", "pp_cny", 1.10, "采购价(CNY)",
+            extra={"采购价(USD)": round(purchase_price_cny * 1.10 / exchange_rate, 2)},
+        ),
+        SensitivityVariation(
+            "采购价 -10%", "pp_cny", 0.90, "采购价(CNY)",
+            extra={"采购价(USD)": round(purchase_price_cny * 0.90 / exchange_rate, 2)},
+        ),
+        SensitivityVariation(
+            "佣金率 +2pp", "cr", commission_rate + 0.02, "佣金率",
+            extra={"佣金率%": f"{(commission_rate + 0.02)*100:.1f}%"},
+            is_absolute=True,
+        ),
+        SensitivityVariation(
+            "佣金率 -2pp", "cr", max(0, commission_rate - 0.02), "佣金率",
+            extra={"佣金率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"},
+            is_absolute=True,
+        ),
+    ]
 
     sensitivity = _sensitivity(_calc, base, variations)
 
@@ -316,7 +360,7 @@ def format_output(result, fmt="table"):
     if sensitivity:
         # 动态计算列宽：根据实际内容的最大显示宽度 + 2 余量
         scenario_width = max(
-            max(_display_width(s) for s in sensitivity.keys()),
+            max(display_width(s) for s in sensitivity.keys()),
             12,
         ) + 2
         # 确保列宽不低于最小内容宽度
@@ -324,7 +368,7 @@ def format_output(result, fmt="table"):
 
         extra_width = max(
             max(
-                _display_width(" ".join(
+                display_width(" ".join(
                     f"{k} {v}" for k, v in data.items()
                     if k not in ("利润", "利润率")
                 ))
@@ -393,24 +437,15 @@ def main():
             platform=args.platform,
         )
     elif args.mode == "crossborder":
-        commission_rate = args.commission_rate
-        if commission_rate is None and args.platform:
-            commission_rate = CROSSBORDER_COMMISSION.get(args.platform, 0.15)
-        elif commission_rate is None:
-            commission_rate = 0.15
-
-        tax_rate = args.tax_rate
-        if tax_rate is None:
-            tax_rate = MARKET_TAX.get(args.market, 0.0)
-
         result = calc_crossborder(
             purchase_price_cny=args.purchase_price_cny,
             exchange_rate=args.exchange_rate,
             selling_price_usd=args.selling_price_usd,
             shipping_usd=args.shipping_usd,
             fba_fee=args.fba_fee,
-            commission_rate=commission_rate,
-            tax_rate=tax_rate,
+            commission_rate=args.commission_rate,
+            tax_rate=args.tax_rate,
+            platform=args.platform,
             market=args.market,
             exchange_buffer=args.exchange_buffer,
         )

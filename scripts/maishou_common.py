@@ -10,10 +10,13 @@ maishou_common.py - 买手 88 API 公共模块
 import os
 import json
 import asyncio
+import logging
 from pathlib import Path
 import aiohttp
 
-from text_utils import display_width as _display_width, pad_str as _pad_str
+logger = logging.getLogger(__name__)
+
+from text_utils import display_width, pad_str as _pad_str
 
 # ── 自动加载 .env 文件 ──
 def _load_dotenv():
@@ -50,8 +53,6 @@ def get_invite_code() -> str:
 def get_openid() -> str:
     """动态获取 MAISHOU_OPENID，支持运行时 .env 加载后设置"""
     return os.getenv("MAISHOU_OPENID") or ""
-
-
 
 
 def get_headers_app() -> dict:
@@ -135,7 +136,7 @@ def format_table(rows: list[dict], columns: dict[str, int]) -> str:
     header_parts = [_pad_str(col, width) for col, width in columns.items()]
     header = "  ".join(header_parts)
     # 分隔线按显示宽度算
-    sep = "-" * _display_width(header)
+    sep = "-" * display_width(header)
     lines.append(header)
     lines.append(sep)
 
@@ -151,7 +152,7 @@ def format_table(rows: list[dict], columns: dict[str, int]) -> str:
 
 # ── 统一 POST 重试 ──
 
-async def _retry_post(
+async def retry_post(
     session: aiohttp.ClientSession,
     url: str,
     json_payload: dict,
@@ -224,7 +225,7 @@ async def search_api(
     if limit > 0:
         payload["limit"] = limit
 
-    data, error = await _retry_post(session, SEARCH_URL, payload)
+    data, error = await retry_post(session, SEARCH_URL, payload)
     if error:
         return [], error
 

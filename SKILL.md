@@ -1,6 +1,6 @@
 ---
 name: ecommerce-product-investigator
-version: 0.4.3
+version: 0.4.4
 description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。
 agent_created: true
 ---

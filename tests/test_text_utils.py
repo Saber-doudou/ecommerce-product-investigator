@@ -1,7 +1,4 @@
 """text_utils.py 单元测试 — CJK 宽度计算、截断、对齐"""
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from text_utils import display_width, pad_str
 

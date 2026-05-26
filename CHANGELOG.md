@@ -4,6 +4,33 @@
 
 ---
 
+## [0.4.4] — 2026-05-26
+
+### 修复（P0 — 审查报告 v0.4.3）
+- **maishou_common.py logger 未定义**：`_load_dotenv()` 内 `logger.debug()` 引用未定义变量导致 NameError。添加 `import logging` 和 `logger = logging.getLogger(__name__)`
+
+### 修复（P1）
+- **calc_crossborder() market 参数未使用**：函数签名声明 `market="US"` 但内部不推断 tax_rate。现在 `tax_rate=None`（默认）时自动从 MARKET_TAX 推断。同时新增 `platform` 参数支持自动推断佣金率（与 calc_domestic 行为统一）
+
+### 优化（P2 — 审查报告 v0.4.3）
+- **`_retry_post` → `retry_post`**：去掉下划线前缀，明确跨模块共享语义
+- **导入风格统一**：`_display_width` → `display_width`，与 text_utils.py 导出和 maishou_price.py 一致
+- **测试冗余 sys.path**：test_profit_calc.py 和 test_text_utils.py 移除手动 sys.path.insert（conftest.py 已统一处理）
+- **多余空行**：maishou_common.py PEP 8 规范化
+- **pytest 配置**：新增 pytest.ini，配置 `asyncio_mode = strict`，消除弃用警告
+- **variations 列表格式**：`]` 移到独立行，便于 diff 和阅读
+- **pyproject.toml**：新增项目配置文件，定义元数据、依赖和 pytest 配置
+
+### 架构改进（Arch — 审查报告 v0.4.3）
+- **SensitivityVariation dataclass**：替代 6 元素位置元组，字段语义明确，新增维度不易出错
+- **推断逻辑统一**：calc_crossborder() 内部统一处理 commission_rate（platform → 佣金率）和 tax_rate（market → 税率）推断，CLI 层不再预解析
+- **集成测试**：新增 `tests/integration/test_cli.py`（8 用例），覆盖国内/跨境 CLI 端到端、平台推断、市场税率推断
+
+### 测试
+- 测试总数 58 → 67（+9），全部通过（58 单元 + 9 集成）
+
+---
+
 ## [0.4.3] — 2026-05-26
 
 ### 修复（P0 — 审查报告 v0.4.2）

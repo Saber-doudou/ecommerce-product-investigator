@@ -12,7 +12,7 @@ class TestDetail:
     async def test_full_success(self):
         """两个 API 都正常返回"""
         with patch("maishou_search.get_session", new=AsyncMock()):
-            with patch("maishou_search._retry_post", new=AsyncMock()) as mock_rp:
+            with patch("maishou_search.retry_post", new=AsyncMock()) as mock_rp:
                 mock_rp.side_effect = [
                     ({"data": {"title": "蓝牙耳机 Pro", "price": "199"}}, None),
                     ({"data": {"appUrl": "https://x.com/item/123", "kl": "￥ABC123"}}, None),
@@ -25,7 +25,7 @@ class TestDetail:
     async def test_detail_api_fails(self):
         """第一步 DETAIL_URL 失败（重试后仍失败）"""
         with patch("maishou_search.get_session", new=AsyncMock()):
-            with patch("maishou_search._retry_post", new=AsyncMock()) as mock_rp:
+            with patch("maishou_search.retry_post", new=AsyncMock()) as mock_rp:
                 mock_rp.return_value = ({}, "请求失败（已重试）: timeout")
                 result = await detail("123", 2)
                 assert result.startswith("❌")
@@ -36,7 +36,7 @@ class TestDetail:
     async def test_target_url_fails_non_fatal(self):
         """TARGET_URL 失败不应阻断，仍返回部分数据"""
         with patch("maishou_search.get_session", new=AsyncMock()):
-            with patch("maishou_search._retry_post", new=AsyncMock()) as mock_rp:
+            with patch("maishou_search.retry_post", new=AsyncMock()) as mock_rp:
                 mock_rp.side_effect = [
                     ({"data": {"title": "测试商品"}}, None),
                     ({}, "获取分享链接失败"),
@@ -50,7 +50,7 @@ class TestDetail:
     async def test_field_extraction(self):
         """字段提取正确性：购买链接、复制口令"""
         with patch("maishou_search.get_session", new=AsyncMock()):
-            with patch("maishou_search._retry_post", new=AsyncMock()) as mock_rp:
+            with patch("maishou_search.retry_post", new=AsyncMock()) as mock_rp:
                 mock_rp.side_effect = [
                     ({"data": {"title": "test item"}}, None),
                     ({"data": {"appUrl": "tb.cn/abc", "kl": "copy-me"}}, None),
@@ -63,7 +63,7 @@ class TestDetail:
     async def test_yaml_format_default(self):
         """默认输出 YAML 格式"""
         with patch("maishou_search.get_session", new=AsyncMock()):
-            with patch("maishou_search._retry_post", new=AsyncMock()) as mock_rp:
+            with patch("maishou_search.retry_post", new=AsyncMock()) as mock_rp:
                 mock_rp.side_effect = [
                     ({"data": {"title": "yaml test"}}, None),
                     ({"data": {}}, None),
@@ -75,7 +75,7 @@ class TestDetail:
     async def test_json_format(self):
         """--format json 输出 JSON"""
         with patch("maishou_search.get_session", new=AsyncMock()):
-            with patch("maishou_search._retry_post", new=AsyncMock()) as mock_rp:
+            with patch("maishou_search.retry_post", new=AsyncMock()) as mock_rp:
                 mock_rp.side_effect = [
                     ({"data": {"title": "json test"}}, None),
                     ({"data": {}}, None),

@@ -39,7 +39,7 @@ from maishou_common import (
     SOURCE_MAP, TIMEOUT,
     get_invite_code, get_openid, get_headers_app,
     get_session, close_session, check_env, format_table,
-    search_api, _retry_post,
+    search_api, retry_post,
 )
 
 
@@ -122,7 +122,7 @@ async def detail(id: str, source: int, **kwargs) -> str:
     }
 
     # 第一步：获取商品详情
-    data, error = await _retry_post(
+    data, error = await retry_post(
         session, DETAIL_URL,
         {**params, "keyword": "", "usageScene": 5},
     )
@@ -131,7 +131,7 @@ async def detail(id: str, source: int, **kwargs) -> str:
     detail_data = (data.get("data") or {}) if isinstance(data, dict) else {}
 
     # 第二步：获取分享链接（非致命，失败只警告）
-    data2, err2 = await _retry_post(
+    data2, err2 = await retry_post(
         session, TARGET_URL,
         {**params, "isDirectDetail": 0},
     )

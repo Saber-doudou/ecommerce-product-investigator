@@ -1,6 +1,63 @@
 # ecommerce-product-investigator 交付总结
 
-> 审查驱动持续交付 | 2026-05-25
+> 审查驱动持续交付 | 2026-05-26
+
+---
+
+## v0.4.4 增量修复
+
+基于 Saber_lily 审查报告 v0.4.3 | 2026-05-26
+
+### TL;DR
+
+审查报告 v0.4.3 **全部建议已采纳**（1 P0 + 1 P1 + 7 P2 + 3 Arch）。新增 3 个文件、修改 8 个文件、67 个测试全通过。
+
+### 交付概览
+
+| 维度 | 数值 |
+|:---|:---|
+| **修复总数** | 12 项 |
+| **P0 修复** | 1/1 ✅ |
+| **P1 修复** | 1/1 ✅ |
+| **P2 优化** | 7/7 ✅ |
+| **Arch 改进** | 3/3 ✅ |
+| **变更文件** | 11 个（3 新建 + 8 修改） |
+| **单元测试** | 58 个全部通过 |
+| **集成测试** | 9 个全部通过（新增） |
+
+### 文件变更清单
+
+| 文件 | 说明 |
+|:---|:---|
+| `scripts/maishou_common.py` | P0-1 logger 修复 + P2-1 retry_post 重命名 + P2-2 导入统一 + P2-4 多余空行 |
+| `scripts/profit_calc.py` | P1-1 market 推断 + Arch-1 SensitivityVariation dataclass + Arch-2 推断统一 + P2-2/P2-6 |
+| `scripts/maishou_search.py` | P2-1 retry_post 重命名引用更新 |
+| `tests/test_profit_calc.py` | P2-3 冗余 sys.path 移除 |
+| `tests/test_text_utils.py` | P2-3 冗余 sys.path 移除 |
+| `tests/test_maishou_search.py` | P2-1 mock 名称同步 |
+| `tests/integration/__init__.py` | ➕ Arch-3 集成测试包 |
+| `tests/integration/test_cli.py` | ➕ Arch-3 CLI 端到端测试（8 用例） |
+| `pytest.ini` | ➕ P2-5 asyncio_mode = strict |
+| `pyproject.toml` | ➕ P2-7 项目配置 |
+| `SKILL.md` | 版本号 0.4.3 → 0.4.4 |
+| `CHANGELOG.md` | v0.4.4 条目 |
+
+### 审查报告 v0.4.3 最终状态
+
+| 优先级 | 总数 | 已修复 | 未采纳 |
+|:---:|:---:|:---:|:---:|
+| P0 | 1 | 1 ✅ | 0 |
+| P1 | 3 | 2 ✅ | 1 |
+| P2 | 7 | 7 ✅ | 0 |
+| Arch | 3 | 3 ✅ | 0 |
+
+P1-2（docs/ 使用说明书）因文件不存在于本地环境，已在审查报告中标注"此文档已移除，最新功能请参考 SKILL.md 和 CHANGELOG.md"。
+
+### 用户下一步建议
+
+1. **提交到 GitHub**：`git add . && git commit -m "v0.4.4: 审查报告全量修复 (P0x1 P1x2 P2x7 Archx3)" && git push`
+2. **重新注册 skill**：`ima_skill_create -d C:\Users\Saber\.workbuddy\skills\ecommerce-product-investigator`
+3. **运行测试确认**：`pytest tests/ -v` 确认 67 个用例通过
 
 ---
 

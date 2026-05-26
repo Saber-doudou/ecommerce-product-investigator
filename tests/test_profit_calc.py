@@ -1,7 +1,4 @@
 """profit_calc.py 单元测试 — 国内/跨境利润计算、敏感度分析、边界值"""
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 import pytest
 from profit_calc import (
