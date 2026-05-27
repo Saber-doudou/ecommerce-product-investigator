@@ -134,6 +134,30 @@ class TestEdgeCases:
         r = calc_domestic(purchase_price=80, selling_price=159, commission_rate=0.05)
         assert r["运费"] == 0
 
+    def test_domestic_purchase_greater_than_selling(self):
+        """采购价 > 售价 → 亏损，利润率为负"""
+        r = calc_domestic(purchase_price=200, selling_price=100, commission_rate=0.05)
+        assert r["利润"] < 0
+        # 利润率是负值（200 采购 + 5 扣点 = 205 成本，卖 100，亏损 105，利润率 -105%）
+        assert r["利润"] == pytest.approx(-105, abs=0.1)
+
+    def test_domestic_large_numbers(self):
+        """大数值不溢出，利润计算正确"""
+        r = calc_domestic(purchase_price=99999, selling_price=150000, commission_rate=0.05)
+        assert r["利润"] == pytest.approx(150000 - 99999 - 7500, abs=1)
+
+    def test_domestic_100_percent_commission(self):
+        """100% 佣金率 → 利润可以正确计算（极端的业务逻辑测试，不验证合理性）"""
+        r = calc_domestic(purchase_price=80, selling_price=159, commission_rate=1.0)
+        assert r["平台扣点"] == 159
+        assert r["利润"] == pytest.approx(159 - 80 - 159, abs=0.01)
+
+    def test_domestic_zero_purchase_price(self):
+        """采购价为 0 → 利润 = 售价 - 运费 - 扣点"""
+        r = calc_domestic(purchase_price=0, selling_price=159, shipping=8, commission_rate=0.05)
+        assert r["采购价"] == 0
+        assert r["利润"] == pytest.approx(159 - 8 - 7.95, abs=0.01)
+
     def test_crossborder_high_commission(self):
         """高佣金率下利润为负"""
         r = calc_crossborder(
@@ -141,6 +165,26 @@ class TestEdgeCases:
             selling_price_usd=10, commission_rate=0.30,
         )
         assert r["单件利润"] < 0
+
+    def test_crossborder_zero_price(self):
+        """售价为 0 → 极端亏损"""
+        r = calc_crossborder(
+            purchase_price_cny=50, exchange_rate=7.2,
+            selling_price_usd=0, commission_rate=0.15,
+        )
+        assert r["单件利润"] < 0
+        # 保本售价应 > 0（成本不为零）
+        assert r["保本售价"] > 0
+
+    def test_crossborder_large_numbers(self):
+        """大数值不溢出"""
+        r = calc_crossborder(
+            purchase_price_cny=999999, exchange_rate=7.2,
+            selling_price_usd=9999, fba_fee=500, shipping_usd=1000,
+            commission_rate=0.15,
+        )
+        assert isinstance(r["单件利润"], float)
+        assert r["单位硬性成本"] > 0
 
     def test_crossborder_strong_rmb(self):
         """人民币升值（汇率下降）→ 采购成本上升 → 利润下降"""
