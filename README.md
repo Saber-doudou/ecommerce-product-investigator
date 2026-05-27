@@ -1,6 +1,6 @@
 # ecommerce-product-investigator
 
-![Tests](https://img.shields.io/badge/tests-68%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-74%20passed-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Version](https://img.shields.io/badge/version-0.4.5-orange)
 
