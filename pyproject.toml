@@ -1,8 +1,19 @@
 [project]
 name = "ecommerce-product-investigator"
-version = "0.4.4"
+version = "0.4.5"
 description = "电商选品调研工具 — 国内+跨境双模式，支持全网比价和深度调研"
 requires-python = ">=3.11"
+authors = [{name = "Saber-doudou"}]
+license = {text = "MIT"}
+readme = "README.md"
+repository = "https://github.com/Saber-doudou/ecommerce-product-investigator"
+keywords = ["ecommerce", "product-research", "profit-calculator", "cross-border"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "aiohttp>=3.9",
     "PyYAML>=6.0",

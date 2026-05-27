@@ -1,5 +1,9 @@
 # ecommerce-product-investigator
 
+![Tests](https://img.shields.io/badge/tests-68%20passed-brightgreen)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Version](https://img.shields.io/badge/version-0.4.5-orange)
+
 电商平台商品调研与选品分析工具（**国内电商 + 跨境电商双模式**）。
 
 - **国内版**：通过 CDP 连接用户已登录的浏览器，提取商品参数/规格/价格/评价，生成 AI 购买建议。支持京东、淘宝、拼多多、闲鱼、1688。

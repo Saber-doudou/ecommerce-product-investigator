@@ -101,6 +101,18 @@ class TestCrossBorderCLI:
         assert code == 0, f"exit={code} stderr={stderr}"
         assert "6.0%" in stdout
 
+    def test_combined_platform_market_inference(self):
+        """--platform shopee --market DE 应同时推断佣金率 6% + VAT 19%"""
+        code, stdout, stderr = _run(
+            "crossborder",
+            "--purchase-price-cny", "80", "--exchange-rate", "7.2",
+            "--selling-price-usd", "29.99",
+            "--platform", "shopee", "--market", "DE",
+        )
+        assert code == 0, f"exit={code} stderr={stderr}"
+        assert "6.0%" in stdout, "应推断 shopee 佣金率 6%"
+        assert "19.0%" in stdout, "应推断 DE VAT 19%"
+
     def test_sensitivity_in_output(self):
         code, stdout, stderr = _run(
             "crossborder",

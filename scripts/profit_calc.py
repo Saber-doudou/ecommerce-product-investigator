@@ -20,7 +20,7 @@ import argparse
 import json
 import sys
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -303,6 +303,16 @@ def calc_crossborder(
         SensitivityVariation(
             "佣金率 -2pp", "cr", max(0, commission_rate - 0.02), "佣金率",
             extra={"佣金率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"},
+            is_absolute=True,
+        ),
+        SensitivityVariation(
+            "税率 +2pp", "tr", tax_rate + 0.02, "税率",
+            extra={"税率%": f"{(tax_rate + 0.02)*100:.1f}%"},
+            is_absolute=True,
+        ),
+        SensitivityVariation(
+            "税率 -2pp", "tr", max(0, tax_rate - 0.02), "税率",
+            extra={"税率%": f"{max(0, tax_rate - 0.02)*100:.1f}%"},
             is_absolute=True,
         ),
     ]

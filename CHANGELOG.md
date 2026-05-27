@@ -4,6 +4,24 @@
 
 ---
 
+## [0.4.5] — 2026-05-27
+
+### 修复（P1 — 审查报告 v0.4.4）
+- **get_session() docstring 不准确**：文档声称"3 次重试"但实际重试逻辑在 retry_post() 中。更新 docstring 准确描述行为
+- **close_session() 缺乏锁同步**：直接操作 _SESSION 全局变量未使用 _SESSION_LOCK，存在竞态条件。添加锁同步逻辑
+
+### 优化（P2 — 审查报告 v0.4.4）
+- **pyproject.toml 元数据补充**：添加 authors、license、readme、repository、keywords、classifiers，符合 PEP 621 规范
+- **README.md 徽章**：添加 Tests/Python/Version 状态徽章
+- **crossborder-guide.md 市场示例**：补充 JP（10%）和 UK（20%）市场利润对比表
+- **profit_calc.py 敏感度扩展**：新增税率 ±2pp 敏感度维度
+- **CONTRIBUTING.md**：新增贡献指南（开发环境、测试、代码风格、PR 流程）
+
+### 测试
+- 测试总数 67（不变），全部通过
+
+---
+
 ## [0.4.4] — 2026-05-26
 
 ### 修复（P0 — 审查报告 v0.4.3）
