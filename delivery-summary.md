@@ -1,6 +1,62 @@
 # ecommerce-product-investigator 交付总结
 
-> 审查驱动持续交付 | 2026-05-26
+> 审查驱动持续交付 | 2026-05-27
+
+---
+
+## v0.4.5 增量修复
+
+基于 Saber_lily 审查报告 v0.4.4 + saberlily 优化建议报告 + 自查 | 2026-05-27
+
+### TL;DR
+
+审查报告 v0.4.4 **全部建议已采纳**（2 P1 + 5 P2）。优化报告 **2/12 采纳**。自查修复 3 处不一致。测试数 67→74。
+
+### 交付概览
+
+| 维度 | 数值 |
+|:---|:---|
+| **P1 修复** | 2/2 ✅ |
+| **P2 优化** | 7/7 ✅（v0.4.4 审查 5 + 优化报告 2） |
+| **自查修复** | 3 项 |
+| **变更文件** | 6 个 |
+| **单元测试** | 74 个全部通过（+7） |
+
+### 文件变更清单
+
+| 文件 | 说明 |
+|:---|:---|
+| `scripts/maishou_common.py` | P1-1 get_session() docstring + P1-2 close_session() 锁同步 |
+| `pyproject.toml` | P2-1 元数据补充（authors/license/keywords/classifiers） |
+| `README.md` | P2-2 徽章 + 自查 tests-68→74 |
+| `references/crossborder-guide.md` | P2-3 JP/UK 市场示例 + 自查 跨境 CDP 验证状态表 |
+| `scripts/profit_calc.py` | P2-4 税率 ±2pp 敏感度维度 |
+| `CONTRIBUTING.md` | ➕ P2-5 贡献指南 |
+| `tests/test_profit_calc.py` | 自查 5 个边界条件测试 |
+| `CHANGELOG.md` | v0.4.5 条目 + 自查补录 |
+| `SKILL.md` | 自查 快速模式模板补"模式"字段 |
+
+### 审查报告 v0.4.4 最终状态
+
+| 优先级 | 总数 | 已修复 |
+|:---:|:---:|:---:|
+| P1 | 2 | 2 ✅ |
+| P2 | 5 | 5 ✅ |
+
+### 优化建议报告 采纳情况
+
+| 优先级 | 总数 | 已采纳 | 不采纳原因 |
+|:---:|:---:|:---:|:---|
+| P0 | 3 | 1 ⚠️ | #1 不存在 / #3 已处理 |
+| P1 | 4 | 0 | CLI 工具不需要缓存/限流/配置/日志轮转 |
+| P2 | 5 | 1 | 代码分层/类型注解/错误码/Sphinx/贡献指南 过度工程化 |
+
+### 用户下一步建议
+
+1. **提交到 GitHub**：已推送 `456a01d`
+2. **重新注册 skill**：`ima_skill_create -d ~/.workbuddy/skills/ecommerce-product-investigator`
+3. **运行测试确认**：`pytest tests/ -v` 确认 74 用例通过
+4. **下版本关注**：佣金率自动更新机制、跨境 CDP 实测
 
 ---
 
