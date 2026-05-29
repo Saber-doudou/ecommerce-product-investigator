@@ -1,8 +1,8 @@
 # ecommerce-product-investigator
 
-![Tests](https://img.shields.io/badge/tests-74%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Version](https://img.shields.io/badge/version-0.4.5-orange)
+![Version](https://img.shields.io/badge/version-0.5.0-orange)
 
 电商平台商品调研与选品分析工具（**国内电商 + 跨境电商双模式**）。
 
@@ -218,4 +218,4 @@ MIT License
 
 ---
 
-*Last updated: 2026-05-22 (v0.3.3)*
+*Last updated: 2026-05-29 (v0.5.0)*

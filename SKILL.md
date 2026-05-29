@@ -1,6 +1,6 @@
 ---
 name: ecommerce-product-investigator
-version: 0.4.5
+version: 0.5.0
 description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。
 agent_created: true
 ---
@@ -71,7 +71,16 @@ agent_created: true
 ### AI 简评
 - 优势/注意/适合人群
 ### 💡 建议：[推荐/可考虑/不推荐] — 理由
+
+---
+💡 想要更深入？回复编号：
+1️⃣ 对比其他平台价格
+2️⃣ 查看完整规格参数
+3️⃣ 分析中差评
+4️⃣ 计算利润
 ```
+
+> Agent 识别编号即可路由升级，减少歧义。
 
 ---
 
@@ -84,6 +93,14 @@ agent_created: true
 | 有 URL | 跳过买手搜索，直接 CDP |
 | 无 URL + 有偏好平台 | 买手 API 先搜该平台 |
 | 无 URL + 无偏好 | source=0 全平台搜索 |
+
+**智能跳过规则**：当用户输入已包含足够信息时，跳过对应追问，避免冗余交互。
+
+| 用户输入已包含 | 跳过的追问 |
+|:---|:---|
+| 商品 URL（如 `jd.com/item/...`） | 不问"有没有 URL" |
+| 平台名（如"京东上的机箱"） | 不问"偏好哪个平台" |
+| 多个链接 | 直接进入对比，不问任何前置问题 |
 
 ### 买手引擎：全网快速比价
 
@@ -151,6 +168,26 @@ python scripts/maishou_price.py "关键词" --format json
 
 对已确认关注的品类做持续跟踪，每次对比上次数据标注变化。重点关注：新竞品、价格波动、Review 增速。
 
+### 数据持久化
+
+监测数据存储在 `~/.ecom-investigator/monitor/<品类>/YYYY-MM-DD.json`。
+
+```bash
+# 保存快照
+python scripts/monitor_store.py save --category "电脑机箱" --data '{"prices": [...], "bsr": 1234}'
+
+# 读取上次快照
+python scripts/monitor_store.py load --category "电脑机箱"
+
+# 对比增量变化（自动保存新快照）
+python scripts/monitor_store.py diff --category "电脑机箱" --data '{"prices": [...], "bsr": 2345}'
+
+# 列出所有监测品类
+python scripts/monitor_store.py list
+```
+
+> Agent 执行监测任务时，先 load 上次快照，再跑当前数据采集，最后 diff 输出变化报告。
+
 ---
 
 ## 利润计算公式
@@ -208,15 +245,11 @@ python scripts/profit_calc.py crossborder --purchase-price-cny 80 --exchange-rat
 
 > 💡 设置方式：`export MAISHOU_API_KEY="your_key"` 或写入 `.env` 文件。可参考 `.env.example` 模板。
 
-### 注册 skill（WorkBuddy 环境必须）
+### 注册 skill
 
-将 skill 目录放到 `.workbuddy/skills/` 后，必须执行以下命令使变更生效：
+将 skill 目录放到 `.workbuddy/skills/` 后，WorkBuddy 通过文件系统直接加载 SKILL.md 生效。
 
-```bash
-ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator
-```
-
-> ⚠️ 修改任何 skill 文件后都需要重新执行此命令，否则变更不会生效。
+> 💡 部分 WorkBuddy 版本可能需要额外执行 `ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator`。如该命令不存在，可跳过——文件系统加载已足够。
 
 ## agent-browser 工具
 

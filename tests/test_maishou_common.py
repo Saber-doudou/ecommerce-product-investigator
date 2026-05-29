@@ -1,6 +1,8 @@
-"""maishou_common.py 单元测试 — format_table / check_env 等公共函数"""
+"""maishou_common.py 单元测试 — format_table / check_env / get_session 等公共函数"""
 import pytest
-from maishou_common import format_table, check_env
+import asyncio
+from unittest.mock import patch, AsyncMock
+from maishou_common import format_table, check_env, get_session, close_session
 
 
 class TestFormatTable:
@@ -59,3 +61,34 @@ class TestCheckEnv:
         result = check_env()
         for w in result:
             assert w.startswith("⚠️ ")
+
+
+class TestSessionConcurrency:
+    """get_session() — 并发安全测试"""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_session_creation(self):
+        """多协程同时调用 get_session() 应返回同一实例"""
+        import maishou_common
+        # 重置全局状态
+        maishou_common._SESSION = None
+
+        sessions = await asyncio.gather(*[get_session() for _ in range(10)])
+        # 所有返回的 session 应为同一实例
+        first_id = id(sessions[0])
+        for s in sessions[1:]:
+            assert id(s) == first_id
+
+        await close_session()
+
+    @pytest.mark.asyncio
+    async def test_close_session_after_concurrent_use(self):
+        """并发使用后关闭 session 应成功"""
+        import maishou_common
+        maishou_common._SESSION = None
+
+        sessions = await asyncio.gather(*[get_session() for _ in range(5)])
+        assert not sessions[0].closed
+
+        await close_session()
+        assert maishou_common._SESSION is None

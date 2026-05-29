@@ -97,6 +97,8 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
             })
         return format_table(display_rows, columns)
     else:  # csv
+        if not rows:
+            return "未找到结果"
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))
         writer.writeheader()

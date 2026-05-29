@@ -1,0 +1,18 @@
+# 电商平台佣金率参考
+# 非开发者可直接修改此文件更新佣金率，无需改动代码
+# 如果此文件不存在或格式错误，代码会自动 fallback 到硬编码默认值
+
+domestic:
+  jd: 0.05
+  tmall: 0.05
+  taobao: 0.00
+  pdd: 0.006
+  "1688": 0.03
+
+crossborder:
+  amazon: 0.15
+  shopee: 0.06
+  tiktok: 0.06
+  temu: 0.05
+
+ref_date: "2026-05"

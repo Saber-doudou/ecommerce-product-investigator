@@ -1,6 +1,63 @@
 # ecommerce-product-investigator 交付总结
 
-> 审查驱动持续交付 | 2026-05-27
+> 📋 **本文档面向审查与交付流程**，记录每次审查驱动迭代的交付内容、文件变更清单和审查报告的最终处理状态。
+> 面向用户的版本变更记录请查阅 `CHANGELOG.md`。
+
+---
+
+## v0.5.0 优化报告全量实施
+
+基于 Saber_lily 优化建议报告 v0.4.5 | 2026-05-29
+
+### TL;DR
+
+优化报告 v0.4.5 **15/19 条建议已采纳**（4 P1 + 11 P2）。新增 5 个文件、修改 10 个文件。测试数 74→95。
+
+### 交付概览
+
+| 维度 | 数值 |
+|:---|:---|
+| **P1 修复** | 4/4 ✅ |
+| **P2 优化** | 11/12 ✅（5.2 文档分离已标注） |
+| **P3 推迟** | 2 项（SKILL.md 分层 / 远期功能） |
+| **新增文件** | 5 个 |
+| **修改文件** | 10 个 |
+| **单元测试** | 95 个全部通过（+21） |
+
+### 文件变更清单
+
+| 文件 | 说明 |
+|:---|:---|
+| `scripts/maishou_common.py` | P1-3.1 Session 锁初始化提前 + 并发安全 |
+| `scripts/profit_calc.py` | P1-3.2 YAML 佣金率加载 + P2-3.4 输入校验 + P2-3.6 保本售价维度 |
+| `scripts/text_utils.py` | P2-3.5 Emoji 宽度硬编码修复 |
+| `scripts/maishou_search.py` | P2-3.3 CSV 空行保护 |
+| `scripts/monitor_store.py` | ➕ P1-4.2 监测模式数据持久化 |
+| `references/commission-rates.yaml` | ➕ P1-3.2 佣金率外部化配置文件 |
+| `references/api-limits.md` | ➕ P2-5.3 API 限流文档 |
+| `references/changelog-archive.md` | ➕ P2-5.1 CHANGELOG 历史归档 |
+| `references/crossborder-guide.md` | P2-4.3 跨境 CDP 默认不启用 |
+| `SKILL.md` | P1-4.1 快速模式升级提示 + P1-4.2 监测存储文档 + P2-4.4 智能跳过规则 + 版本号 0.4.5→0.5.0 |
+| `CHANGELOG.md` | P2-5.1 归档精简 + P2-5.2 职责标注 + v0.5.0 条目 |
+| `delivery-summary.md` | P2-5.2 职责标注 + v0.5.0 增量记录 |
+| `tests/test_maishou_search.py` | P2-6.1 search_products() 7 个测试 |
+| `tests/integration/test_cli.py` | P2-6.2 输入校验/新功能/监测CLI/搜索CLI 12 个测试 |
+| `tests/test_maishou_common.py` | P2-6.3 并发安全 2 个测试 |
+
+### 优化报告 v0.4.5 最终状态
+
+| 优先级 | 总数 | 已采纳 | 推迟 | 待定 |
+|:---:|:---:|:---:|:---:|:---:|
+| P1 | 4 | 4 ✅ | 0 | 0 |
+| P2 | 12 | 11 ✅ | 0 | 0（5.2 已确认并标注） |
+| P3 | 2 | 0 | 2 ⏸️ | 0 |
+
+### 用户下一步建议
+
+1. **重新注册 skill**：`ima_skill_create -d C:\Users\Saber\.workbuddy\skills\ecommerce-product-investigator`
+2. **运行测试确认**：`pytest tests/ -v` 确认 95 用例通过
+3. **验证新功能**：`python scripts/monitor_store.py --help` 确认监测存储 CLI 可用
+4. **下版本关注**：监测模式端到端实战验证、SKILL.md 分层（接近 400 行时）、远期新功能（批量 ASIN/评分卡）
 
 ---
 
