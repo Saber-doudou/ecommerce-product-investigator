@@ -86,19 +86,17 @@ HEADERS_BASE = {
 
 # ── Session 管理 ──
 _SESSION: aiohttp.ClientSession | None = None
-_SESSION_LOCK: asyncio.Lock | None = None
+_SESSION_LOCK: asyncio.Lock = asyncio.Lock()
 
 
 async def get_session() -> aiohttp.ClientSession:
-    """懒加载单例 session（线程安全）。
+    """懒加载单例 session（协程安全）。
 
     新 session 使用默认 headers 和 30 秒超时。
     重试逻辑由 retry_post() 函数提供。
     """
-    global _SESSION, _SESSION_LOCK
+    global _SESSION
     if _SESSION is None or _SESSION.closed:
-        if _SESSION_LOCK is None:
-            _SESSION_LOCK = asyncio.Lock()
         async with _SESSION_LOCK:
             if _SESSION is None or _SESSION.closed:
                 _SESSION = aiohttp.ClientSession(headers=HEADERS_BASE, timeout=TIMEOUT)
@@ -106,14 +104,9 @@ async def get_session() -> aiohttp.ClientSession:
 
 
 async def close_session():
-    """关闭全局 session"""
+    """关闭全局 session（协程安全）"""
     global _SESSION
-    if _SESSION_LOCK:
-        async with _SESSION_LOCK:
-            if _SESSION and not _SESSION.closed:
-                await _SESSION.close()
-                _SESSION = None
-    else:
+    async with _SESSION_LOCK:
         if _SESSION and not _SESSION.closed:
             await _SESSION.close()
             _SESSION = None

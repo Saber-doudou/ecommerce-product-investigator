@@ -12,10 +12,21 @@ import unicodedata
 
 
 def display_width(s: str) -> int:
-    """计算字符串的终端显示宽度（CJK 字符占 2 列，ASCII 占 1 列）"""
+    """计算字符串的终端显示宽度（CJK 字符占 2 列，ASCII 占 1 列）。
+    Emoji/符号范围硬编码为 2 列，因 unicodedata.east_asian_width() 对其返回不稳定。
+    """
     w = 0
     for ch in s:
-        if unicodedata.east_asian_width(ch) in ("W", "F"):
+        cp = ord(ch)
+        # Emoji & 符号范围（U+1F300–U+1F9FF, U+2600–U+26FF, U+2700–U+27BF, U+FE00–U+FE0F）
+        if (
+            0x1F300 <= cp <= 0x1F9FF
+            or 0x2600 <= cp <= 0x26FF
+            or 0x2700 <= cp <= 0x27BF
+            or 0xFE00 <= cp <= 0xFE0F
+        ):
+            w += 2
+        elif unicodedata.east_asian_width(ch) in ("W", "F"):
             w += 2
         else:
             w += 1

@@ -1,8 +1,8 @@
 # ecommerce-product-investigator
 
-![Tests](https://img.shields.io/badge/tests-74%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Version](https://img.shields.io/badge/version-0.4.5-orange)
+![Version](https://img.shields.io/badge/version-0.5.0-orange)
 
 电商平台商品调研与选品分析工具（**国内电商 + 跨境电商双模式**）。
 
@@ -15,7 +15,7 @@
 
 ## 功能特性
 
-| 国内电商（beta1 基础） | 跨境电商（beta2 新增） |
+| 国内电商 | 跨境电商 |
 |:---|:---|
 | ✅ 全网比价（买手引擎，支持 9 大平台） | ✅ 选品分析（市场吸引力/竞争格局/利润可行性） |
 | ✅ CDP 深度调研（登录态直读商品页） | ✅ 利润测算（FBA 利润链、保本售价计算） |
@@ -65,22 +65,30 @@ https://item.taobao.com/item.htm?id=123456789」
 1. 将本 skill 放到 WorkBuddy 工作空间的 `.workbuddy/skills/` 目录：
    ```
    .workbuddy/skills/ecommerce-product-investigator/
-   ├── SKILL.md
-   ├── CHANGELOG.md
-   ├── README.md
+   ├── SKILL.md                      # 技能定义（Agent 入口）
+   ├── CHANGELOG.md                  # 最近 3 版本变更记录
+   ├── README.md                     # 本文件
+   ├── CONTRIBUTING.md               # 贡献指南
+   ├── pyproject.toml                # 项目元数据与依赖
    ├── scripts/
-   │   ├── maishou_common.py  # 公共模块（session/headers/API端点）
-   │   ├── maishou_search.py   # 国内比价（✅ 已验证）
-   │   ├── maishou_price.py   # 跨境采购参考（✅ 已验证）
-   │   ├── profit_calc.py     # 利润计算器（✅ 已实现）
-   │   └── requirements.txt   # 依赖清单
-   └── references/
-       ├── domestic-guide.md   # 国内平台参数提取规则
-       ├── crossborder-guide.md # 跨境 4 阶段引擎详解
-       ├── platform-guide.md   # 跨境平台差异速查
-       ├── output-template.md  # 输出模板（4 种场景）
-       ├── fallback-guide.md   # 降级链与精度标注
-       └── cdp-setup.md       # CDP 浏览器配置指南
+   │   ├── maishou_common.py         # 公共模块（session/headers/API/重试）
+   │   ├── maishou_search.py         # 国内比价搜索
+   │   ├── maishou_price.py          # 跨境采购参考价
+   │   ├── profit_calc.py            # 利润计算器（国内+跨境）
+   │   ├── text_utils.py             # 中文对齐 & Emoji 宽度工具
+   │   ├── monitor_store.py          # 监测模式数据持久化
+   │   └── requirements.txt          # 运行时依赖
+   ├── references/
+   │   ├── domestic-guide.md         # 国内平台参数提取规则
+   │   ├── crossborder-guide.md      # 跨境 4 阶段引擎详解
+   │   ├── platform-guide.md         # 跨境平台差异速查
+   │   ├── output-template.md        # 输出模板（4 种场景）
+   │   ├── fallback-guide.md         # 降级链与精度标注
+   │   ├── cdp-setup.md              # CDP 浏览器配置指南
+   │   ├── api-limits.md             # API 限流规则与状态码处理
+   │   ├── commission-rates.yaml     # 佣金率数据（可直接编辑）
+   │   └── changelog-archive.md      # 历史版本归档
+   └── tests/                        # 95 个测试用例
    ```
 
 2. 安装依赖（如需使用脚本）：
@@ -120,17 +128,32 @@ python scripts/maishou_search.py detail --source=2 --id='100012345678'
 
 ### `scripts/maishou_price.py`（跨境采购参考）
 
-基于 `appapi.maishou88.com` API（✅ 2026-05-20 验证通过），获取国内采购参考价。
+基于 `appapi.maishou88.com` API，获取国内采购参考价。
 
 ```bash
-# 基本用法
-python scripts/maishou_price.py --keyword "Action Figure"
+python scripts/maishou_price.py --keyword "Action Figure" --format json --limit 10
+```
 
-# JSON 输出（推荐）
-python scripts/maishou_price.py --keyword "Action Figure" --format json
+### `scripts/profit_calc.py`（利润计算器）
 
-# 指定数量
-python scripts/maishou_price.py --keyword "Action Figure" --limit 10
+国内 + 跨境双模式利润计算，支持敏感度分析和保本售价。
+
+```bash
+# 国内利润计算
+python scripts/profit_calc.py domestic --purchase 50 --selling 99 --shipping 5 --platform jd
+
+# 跨境利润计算
+python scripts/profit_calc.py crossborder --purchase 30 --selling 29.99 --exchange 7.2 --market US --platform amazon
+```
+
+### `scripts/monitor_store.py`（监测模式持久化）
+
+按品类 + 日期保存快照，支持增量对比和变化标注。存储路径 `~/.ecom-investigator/monitor/`。
+
+```bash
+python scripts/monitor_store.py save --category "action-figure" --data '{"items": [...]}'
+python scripts/monitor_store.py diff --category "action-figure"
+python scripts/monitor_store.py list
 ```
 
 ---
@@ -139,12 +162,15 @@ python scripts/maishou_price.py --keyword "Action Figure" --limit 10
 
 | 文件 | 用途 | 何时读取 |
 |:---|:---|:---|
-| `references/domestic-guide.md` | 国内平台参数提取规则（京东异步渲染说明、淘宝/拼多多/1688/闲鱼） | 国内模式参数提取失败时 |
+| `references/domestic-guide.md` | 国内平台参数提取规则（京东/淘宝/拼多多/1688/闲鱼） | 国内模式参数提取时 |
 | `references/crossborder-guide.md` | 跨境 4 阶段引擎、单点查询、监测模式详解 | 跨境模式深度调研时 |
-| `references/platform-guide.md` | 跨境平台差异速查（Amazon/Shopee/TikTok Shop/Temu 佣金/物流/Review/BSR） | 跨境模式报告输出前 |
-| `references/output-template.md` | 输出模板（快速扫描/深度报告/单点查询/监测报告） | 输出报告时参照格式 |
-| `references/fallback-guide.md` | 降级链（API→CDP→Web Search→手动）+ 精度标注体系 | 数据采集出错时 |
+| `references/platform-guide.md` | 跨境平台差异速查（Amazon/Shopee/TikTok Shop/Temu） | 跨境报告输出前 |
+| `references/output-template.md` | 输出模板（快速扫描/深度报告/单点查询/监测报告） | 输出报告时 |
+| `references/fallback-guide.md` | 降级链（API→Web Search→CDP🧪→手动）+ 精度标注 | 数据采集出错时 |
 | `references/cdp-setup.md` | CDP 浏览器自动化配置指南 | 需要连接本地浏览器时 |
+| `references/api-limits.md` | API 限流规则、状态码处理策略 | 调用频率受限时 |
+| `references/commission-rates.yaml` | 各平台佣金率数据（可直接编辑，代码自动 fallback） | 需要更新佣金率时 |
+| `references/changelog-archive.md` | v0.4.3 之前的历史版本记录 | 查阅旧版本变更时 |
 
 ---
 
@@ -192,23 +218,30 @@ python scripts/maishou_price.py --keyword "Action Figure" --limit 10
 
 | 版本 | 日期 | 核心变更 |
 |:---:|:---|:---|
-| **0.3.5** | 2026-05-24 | 架构重构：search_api() 公共函数、敏感度分析参数化、清理固化变量；新增 .env 自动加载、市场自动税率、最坏场景；PEP 723 清理、中文对齐修复 |
-| **0.3.4** | 2026-05-24 | 环境变量动态获取、search API 格式统一、API 响应兼容、format_table 中文对齐、采购价敏感度、佣金率日期、.env.example、依赖说明 |
-| **0.3.3** | 2026-05-22 | 全面修复审查问题：JSON 异常防护、函数重命名、format_table 统一、敏感度增强、文档完善 |
-| **0.3.2** | 2026-05-22 | 修复 SESSION BUG；提取公共模块 maishou_common.py；添加运费敏感度分析；统一错误处理 |
-| **0.3.1** | 2026-05-22 | 修复环境变量/detail/汇率备用金；补充模板/Linux 命令/LICENSE |
-| **0.3.0** | 2026-05-21 | SKILL.md 精简至 214 行；合并 CDP 文件；拆出 crossborder-guide.md；修复脚本 source 映射和 6 项代码质量问题 |
-| **beta2** | 2026-05-20 | 新增跨境模式、平台路由、监测模式、输出模板、降级链、利润公式纠正 |
-| **beta1** | 2026-05-19 | 新增 AI 选品分析层、快速模式、合规提醒、browser-use 兜底 |
+| **0.5.0** | 2026-05-29 | Session 锁竞态修复、佣金率外部化(YAML)、监测模式持久化(monitor_store.py)、快速模式编号升级提示、API 限流文档；测试 74→95 |
+| **0.4.5** | 2026-05-27 | Session 锁同步、pyproject.toml PEP 621、README 徽章、CONTRIBUTING 贡献指南、JP/UK 市场示例；测试 67→74 |
+| **0.4.4** | 2026-05-26 | logger NameError 修复、跨境 tax/commission 自动推断、SensitivityVariation dataclass、pytest.ini、集成测试；测试 58→67 |
+| **0.4.2** | 2026-05-25 | 提取 retry_post() 公共函数、敏感度列宽动态计算、conftest.py 统一路径；测试 33→46 |
+| **0.4.1** | 2026-05-25 | 佣金敏感度 ±2pp、跨境最坏场景命名修正、DE 市场 VAT 示例 |
+| **0.4.0** | 2026-05-25 | 字段映射修复、提取 text_utils.py 消除重复代码、33 个单元测试；print→logging |
+| **0.3.5** | 2026-05-24 | 架构重构：search_api() 公共函数、敏感度参数化、.env 自动加载、市场自动税率 |
+| **0.3.0** | 2026-05-21 | SKILL.md 精简、CDP 文件合并、crossborder-guide 拆出 |
 | **beta0** | 2026-05-18 | 初始版本：CDP 浏览器连接、买手 API 比价、四路线数据提取 |
 
-> 完整变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+> 完整变更记录见 [CHANGELOG.md](CHANGELOG.md)，历史版本归档见 [changelog-archive.md](references/changelog-archive.md)。
 
 ---
 
-## 待验证事项
+## 引擎验证状态
 
-- [ ] CDP 是否能访问 Amazon/Shopee 等境外网站（如不能，降级到 Web Search）
+| 引擎 | 状态 | 说明 |
+|:---|:---|:---|
+| 买手 API（国内比价） | ✅ 已验证 | 淘宝/京东/拼多多/抖音/1688 全平台可用 |
+| CDP（国内深度调研） | ✅ 已验证 | 登录态直读京东/淘宝商品页 |
+| API + Web Search（跨境） | ✅ 已验证 | 主力数据路径 |
+| CDP（跨境境外站） | 🧪 实验性 | Amazon/Shopee 等境外站访问未充分验证，降级为备选 |
+
+> 详见 `references/crossborder-guide.md` 验证状态表。
 
 ---
 
@@ -218,4 +251,4 @@ MIT License
 
 ---
 
-*Last updated: 2026-05-22 (v0.3.3)*
+*Last updated: 2026-05-29 (v0.5.0)*

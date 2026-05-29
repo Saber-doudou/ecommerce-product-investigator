@@ -22,22 +22,78 @@ import sys
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 from text_utils import display_width, pad_str as _pad_str_local
 
 
-# 国内平台佣金参考（截至 2026-05，请以平台官方最新费率为准）
-DOMESTIC_COMMISSION = {
+# ── 佣金率加载（YAML 文件 → fallback 硬编码） ──
+
+# 硬编码默认值（当 YAML 文件不存在或格式错误时使用）
+_DEFAULT_DOMESTIC_COMMISSION = {
     "jd": 0.05,      # 京东 POP 约 3-8%
     "tmall": 0.05,   # 天猫约 2-5%
     "taobao": 0.00,  # 淘宝基础无佣金
     "pdd": 0.006,    # 拼多多 0.6% 支付手续费
     "1688": 0.03,    # 1688 约 2-5%
 }
-COMMISSION_REF_DATE = "2026-05"
+_DEFAULT_CROSSBORDER_COMMISSION = {
+    "amazon": 0.15,
+    "shopee": 0.06,   # 5% + 1% payment fee
+    "tiktok": 0.06,   # 5% + 1% payment fee
+    "temu": 0.05,     # 补贴期
+}
+_DEFAULT_MARKET_TAX = {"US": 0.0, "DE": 0.19, "JP": 0.10, "UK": 0.20}
+_DEFAULT_REF_DATE = "2026-05"
+
 _COMMISSION_STALENESS_MONTHS = 6
+
+
+def _load_commission_rates() -> tuple[dict, dict, dict, str]:
+    """从 references/commission-rates.yaml 加载佣金率和市场税率，失败时 fallback 硬编码默认值。
+
+    Returns:
+        (domestic: dict, crossborder: dict, market_tax: dict, ref_date: str)
+    """
+    yaml_path = Path(__file__).parent.parent / "references" / "commission-rates.yaml"
+    if not yaml_path.exists():
+        logger.debug("佣金率配置文件不存在，使用硬编码默认值: %s", yaml_path)
+        return dict(_DEFAULT_DOMESTIC_COMMISSION), dict(_DEFAULT_CROSSBORDER_COMMISSION), dict(_DEFAULT_MARKET_TAX), _DEFAULT_REF_DATE
+
+    try:
+        import yaml
+        with open(yaml_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            raise ValueError("YAML 根不是字典")
+        domestic = data.get("domestic", {})
+        crossborder = data.get("crossborder", {})
+        market_tax = data.get("market_tax", {})
+        ref_date = data.get("ref_date", _DEFAULT_REF_DATE)
+
+        # 转换 1688 键名（YAML 中为字符串 "1688"）
+        if "1688" in domestic:
+            domestic["1688"] = float(domestic["1688"])
+
+        # 确保所有值都是 float
+        domestic = {str(k): float(v) for k, v in domestic.items()}
+        crossborder = {str(k): float(v) for k, v in crossborder.items()}
+        market_tax = {str(k): float(v) for k, v in market_tax.items()}
+
+        if not domestic or not crossborder:
+            logger.warning("佣金率配置文件数据不完整，使用硬编码默认值")
+            return dict(_DEFAULT_DOMESTIC_COMMISSION), dict(_DEFAULT_CROSSBORDER_COMMISSION), dict(_DEFAULT_MARKET_TAX), _DEFAULT_REF_DATE
+
+        logger.debug("从 YAML 加载佣金率/税率成功: %s", yaml_path)
+        return domestic, crossborder, market_tax, str(ref_date)
+    except Exception as e:
+        logger.warning("佣金率配置文件加载失败 (%s)，使用硬编码默认值", e)
+        return dict(_DEFAULT_DOMESTIC_COMMISSION), dict(_DEFAULT_CROSSBORDER_COMMISSION), dict(_DEFAULT_MARKET_TAX), _DEFAULT_REF_DATE
+
+
+DOMESTIC_COMMISSION, CROSSBORDER_COMMISSION, MARKET_TAX, COMMISSION_REF_DATE = _load_commission_rates()
 
 
 def check_commission_staleness() -> list[str]:
@@ -50,22 +106,14 @@ def check_commission_staleness() -> list[str]:
         if months > _COMMISSION_STALENESS_MONTHS:
             warnings.append(
                 f"⚠️ 佣金率参考日期为 {COMMISSION_REF_DATE}（已过 {months} 个月），"
-                f"请确认 DOMESTIC_COMMISSION / CROSSBORDER_COMMISSION 仍为最新费率"
+                f"请确认 references/commission-rates.yaml 中费率为最新"
             )
     except ValueError:
         pass
     return warnings
 
-# 跨境平台佣金参考（截至 2026-05，请以平台官方最新费率为准）
-CROSSBORDER_COMMISSION = {
-    "amazon": 0.15,
-    "shopee": 0.06,   # 5% + 1% payment fee
-    "tiktok": 0.06,   # 5% + 1% payment fee
-    "temu": 0.05,     # 补贴期
-}
-
-# 按市场自动推断税率（不指定 --tax-rate 时生效）
-MARKET_TAX = {"US": 0.0, "DE": 0.19, "JP": 0.10, "UK": 0.20}
+# MARKET_TAX 已由 _load_commission_rates() 从 commission-rates.yaml 加载，
+# 不再在此处硬编码。不指定 --tax-rate 时由 market 参数自动推断。
 
 
 # ── 敏感度分析工具 ──
@@ -144,7 +192,17 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
 
     Returns:
         dict: 包含利润、利润率、敏感度分析等字段
+
+    Raises:
+        ValueError: 输入参数非法（负值等）
     """
+    # 输入校验
+    if purchase_price < 0:
+        raise ValueError("采购价不能为负数")
+    if selling_price < 0:
+        raise ValueError("售价不能为负数")
+    if shipping < 0:
+        raise ValueError("运费不能为负数")
     if commission_rate is None and platform:
         commission_rate = DOMESTIC_COMMISSION.get(platform.lower(), 0.05)
     elif commission_rate is None:
@@ -154,6 +212,10 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
     total_cost = purchase_price + shipping + commission
     profit = selling_price - total_cost
     profit_rate = profit / selling_price * 100 if selling_price > 0 else 0
+
+    # 保本售价
+    divisor_d = 1 - commission_rate if commission_rate < 1 else float("inf")
+    break_even_price = (purchase_price + shipping) / divisor_d if divisor_d > 0 else float("inf")
 
     def _calc(pp, sp, sh, cr):
         comm = sp * cr
@@ -181,6 +243,10 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
             extra={"扣点率%": f"{max(0, commission_rate - 0.02)*100:.1f}%"},
             is_absolute=True,
         ),
+        SensitivityVariation(
+            "保本售价", "sp", break_even_price, "售价",
+            is_absolute=True,
+        ),
     ]
 
     sensitivity = _sensitivity(_calc, base, variations)
@@ -200,6 +266,7 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
         "平台扣点": round(commission, 2),
         "总成本": round(total_cost, 2),
         "售价": selling_price,
+        "保本售价": round(break_even_price, 2),
         "利润": round(profit, 2),
         "利润率": f"{profit_rate:.1f}%",
         "敏感度分析": {**sensitivity, **worst},
@@ -230,7 +297,24 @@ def calc_crossborder(
 
     Returns:
         dict: 包含保本售价、利润、利润率、敏感度分析等字段
+
+    Raises:
+        ValueError: 输入参数非法（负值等）
     """
+    # 输入校验
+    if purchase_price_cny < 0:
+        raise ValueError("采购价不能为负数")
+    if exchange_rate <= 0:
+        raise ValueError("汇率必须大于 0")
+    if selling_price_usd < 0:
+        raise ValueError("售价不能为负数")
+    if shipping_usd < 0:
+        raise ValueError("运费不能为负数")
+    if fba_fee < 0:
+        raise ValueError("FBA费不能为负数")
+    if tax_rate is not None and not (0 <= tax_rate < 1):
+        raise ValueError(f"税率必须在 0-1 之间（如 0.19=19%），当前值: {tax_rate}")
+
     # 自动推断佣金率：platform → commission_rate（仅在 commission_rate 未显式指定时生效）
     if commission_rate is None and platform:
         commission_rate = CROSSBORDER_COMMISSION.get(platform.lower(), 0.15)
@@ -313,6 +397,10 @@ def calc_crossborder(
         SensitivityVariation(
             "税率 -2pp", "tr", max(0, tax_rate - 0.02), "税率",
             extra={"税率%": f"{max(0, tax_rate - 0.02)*100:.1f}%"},
+            is_absolute=True,
+        ),
+        SensitivityVariation(
+            "保本售价", "sp_usd", break_even_price, "售价",
             is_absolute=True,
         ),
     ]

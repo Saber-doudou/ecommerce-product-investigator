@@ -1,6 +1,6 @@
 [project]
 name = "ecommerce-product-investigator"
-version = "0.4.5"
+version = "0.5.1"
 description = "电商选品调研工具 — 国内+跨境双模式，支持全网比价和深度调研"
 requires-python = ">=3.11"
 authors = [{name = "Saber-doudou"}]

@@ -1,247 +1,124 @@
 # ecommerce-product-investigator 交付总结
 
-> 审查驱动持续交付 | 2026-05-27
+> 面向审查与交付流程。用户版变更记录见 `CHANGELOG.md`。
+
+---
+
+## v0.5.1 审查报告残余优化
+
+基于 Saber_lily 审查报告 v0.5.0 | 2026-05-29
+
+### TL;DR
+
+审查报告 v0.5.0 **7/7 条残余建议全部实施**（2 P2 + 5 P3）。新增 1 个文件、修改 4 个文件。测试数 95→125。
+
+### 交付概览
+
+| 维度 | 数值 |
+|:---|:---|
+| **P2 修复** | 2/2 ✅ |
+| **P3 优化** | 5/5 ✅ |
+| **新增文件** | 1 个 |
+| **修改文件** | 4 个 |
+| **单元测试** | 125 个全部通过（+30） |
+
+### 文件变更清单
+
+| 文件 | 变更 | 说明 |
+|:---|:---:|:---|
+| `scripts/monitor_store.py` | 🔧 | P2-1 通用字段增删检测 + P3-5 价格格式兼容 + warning |
+| `scripts/profit_calc.py` | 🔧 | P3-3 tax_rate 0-1 范围校验 + P3-4 MARKET_TAX 从 YAML 加载 |
+| `references/commission-rates.yaml` | 🔧 | P3-4 新增 market_tax 段（US/DE/JP/UK） |
+| `tests/test_monitor_store.py` | ➕ | P2-2 25 个单元测试（读写/对比/安全/格式化） |
+| `tests/integration/test_cli.py` | 🔧 | P3-6 maishou_price CLI 5 个集成测试 |
+| `delivery-summary.md` | 🔧 | P3-7 精简，历史版本汇总为表格 |
+
+### 审查报告 v0.5.0 最终状态
+
+| 优先级 | 总数 | 已采纳 |
+|:---:|:---:|:---:|
+| P2 | 2 | 2 ✅ |
+| P3 | 5 | 5 ✅ |
+
+---
+
+## v0.5.0 优化报告全量实施
+
+基于 Saber_lily 优化建议报告 v0.4.5 | 2026-05-29
+
+### TL;DR
+
+优化报告 v0.4.5 **15/19 条建议已采纳**（4 P1 + 11 P2）。新增 5 个文件、修改 10 个文件。测试数 74→95。
+
+### 交付概览
+
+| 维度 | 数值 |
+|:---|:---|
+| **P1 修复** | 4/4 ✅ |
+| **P2 优化** | 11/12 ✅ |
+| **P3 推迟** | 2 项（SKILL.md 分层 / 远期功能） |
+| **新增文件** | 5 个 |
+| **修改文件** | 10 个 |
+| **单元测试** | 95 个全部通过（+21） |
+
+### 文件变更清单
+
+| 文件 | 说明 |
+|:---|:---|
+| `scripts/maishou_common.py` | P1-3.1 Session 锁初始化提前 + 并发安全 |
+| `scripts/profit_calc.py` | P1-3.2 YAML 佣金率加载 + P2-3.4 输入校验 + P2-3.6 保本售价维度 |
+| `scripts/text_utils.py` | P2-3.5 Emoji 宽度硬编码修复 |
+| `scripts/maishou_search.py` | P2-3.3 CSV 空行保护 |
+| `scripts/monitor_store.py` | ➕ P1-4.2 监测模式数据持久化 |
+| `references/commission-rates.yaml` | ➕ P1-3.2 佣金率外部化配置文件 |
+| `references/api-limits.md` | ➕ P2-5.3 API 限流文档 |
+| `references/changelog-archive.md` | ➕ P2-5.1 CHANGELOG 历史归档 |
+| `references/crossborder-guide.md` | P2-4.3 跨境 CDP 默认不启用 |
+| `SKILL.md` | P1-4.1 快速模式升级提示 + P1-4.2 监测存储文档 + P2-4.4 智能跳过规则 |
+| `CHANGELOG.md` | P2-5.1 归档精简 + v0.5.0 条目 |
+| `delivery-summary.md` | P2-5.2 职责标注 + v0.5.0 增量记录 |
+| `tests/test_maishou_search.py` | P2-6.1 search_products() 7 个测试 |
+| `tests/integration/test_cli.py` | P2-6.2 集成测试扩展 12 用例 |
+| `tests/test_maishou_common.py` | P2-6.3 并发安全 2 个测试 |
+
+### 优化报告 v0.4.5 最终状态
+
+| 优先级 | 总数 | 已采纳 | 推迟 |
+|:---:|:---:|:---:|:---:|
+| P1 | 4 | 4 ✅ | 0 |
+| P2 | 12 | 11 ✅ | 0 |
+| P3 | 2 | 0 | 2 ⏸️ |
 
 ---
 
 ## v0.4.5 增量修复
 
-基于 Saber_lily 审查报告 v0.4.4 + saberlily 优化建议报告 + 自查 | 2026-05-27
+基于 Saber_lily 审查报告 v0.4.4 + 优化建议报告 + 自查 | 2026-05-27
 
 ### TL;DR
 
-审查报告 v0.4.4 **全部建议已采纳**（2 P1 + 5 P2）。优化报告 **2/12 采纳**。自查修复 3 处不一致。测试数 67→74。
+审查报告 v0.4.4 全部建议已采纳（2 P1 + 5 P2），优化报告 2/12 采纳，自查修复 3 处。测试 67→74。
 
-### 交付概览
-
-| 维度 | 数值 |
-|:---|:---|
-| **P1 修复** | 2/2 ✅ |
-| **P2 优化** | 7/7 ✅（v0.4.4 审查 5 + 优化报告 2） |
-| **自查修复** | 3 项 |
-| **变更文件** | 6 个 |
-| **单元测试** | 74 个全部通过（+7） |
-
-### 文件变更清单
+### 文件变更
 
 | 文件 | 说明 |
 |:---|:---|
-| `scripts/maishou_common.py` | P1-1 get_session() docstring + P1-2 close_session() 锁同步 |
-| `pyproject.toml` | P2-1 元数据补充（authors/license/keywords/classifiers） |
-| `README.md` | P2-2 徽章 + 自查 tests-68→74 |
-| `references/crossborder-guide.md` | P2-3 JP/UK 市场示例 + 自查 跨境 CDP 验证状态表 |
-| `scripts/profit_calc.py` | P2-4 税率 ±2pp 敏感度维度 |
+| `scripts/maishou_common.py` | P1-1 docstring + P1-2 close_session 锁同步 |
+| `pyproject.toml` | P2-1 元数据补充 |
+| `README.md` | P2-2 徽章 + 测试数 68→74 |
+| `references/crossborder-guide.md` | P2-3 JP/UK 市场 + 跨境 CDP 验证状态表 |
+| `scripts/profit_calc.py` | P2-4 税率 ±2pp 敏感度 |
 | `CONTRIBUTING.md` | ➕ P2-5 贡献指南 |
 | `tests/test_profit_calc.py` | 自查 5 个边界条件测试 |
-| `CHANGELOG.md` | v0.4.5 条目 + 自查补录 |
-| `SKILL.md` | 自查 快速模式模板补"模式"字段 |
-
-### 审查报告 v0.4.4 最终状态
-
-| 优先级 | 总数 | 已修复 |
-|:---:|:---:|:---:|
-| P1 | 2 | 2 ✅ |
-| P2 | 5 | 5 ✅ |
-
-### 优化建议报告 采纳情况
-
-| 优先级 | 总数 | 已采纳 | 不采纳原因 |
-|:---:|:---:|:---:|:---|
-| P0 | 3 | 1 ⚠️ | #1 不存在 / #3 已处理 |
-| P1 | 4 | 0 | CLI 工具不需要缓存/限流/配置/日志轮转 |
-| P2 | 5 | 1 | 代码分层/类型注解/错误码/Sphinx/贡献指南 过度工程化 |
-
-### 用户下一步建议
-
-1. **提交到 GitHub**：已推送 `456a01d`
-2. **重新注册 skill**：`ima_skill_create -d ~/.workbuddy/skills/ecommerce-product-investigator`
-3. **运行测试确认**：`pytest tests/ -v` 确认 74 用例通过
-4. **下版本关注**：佣金率自动更新机制、跨境 CDP 实测
+| `SKILL.md` | 自查 快速模式模板补字段 |
 
 ---
 
-## v0.4.4 增量修复
+## 历史版本汇总（v0.4.0 → v0.4.4）
 
-基于 Saber_lily 审查报告 v0.4.3 | 2026-05-26
-
-### TL;DR
-
-审查报告 v0.4.3 **全部建议已采纳**（1 P0 + 1 P1 + 7 P2 + 3 Arch）。新增 3 个文件、修改 8 个文件、67 个测试全通过。
-
-### 交付概览
-
-| 维度 | 数值 |
-|:---|:---|
-| **修复总数** | 12 项 |
-| **P0 修复** | 1/1 ✅ |
-| **P1 修复** | 1/1 ✅ |
-| **P2 优化** | 7/7 ✅ |
-| **Arch 改进** | 3/3 ✅ |
-| **变更文件** | 11 个（3 新建 + 8 修改） |
-| **单元测试** | 58 个全部通过 |
-| **集成测试** | 9 个全部通过（新增） |
-
-### 文件变更清单
-
-| 文件 | 说明 |
-|:---|:---|
-| `scripts/maishou_common.py` | P0-1 logger 修复 + P2-1 retry_post 重命名 + P2-2 导入统一 + P2-4 多余空行 |
-| `scripts/profit_calc.py` | P1-1 market 推断 + Arch-1 SensitivityVariation dataclass + Arch-2 推断统一 + P2-2/P2-6 |
-| `scripts/maishou_search.py` | P2-1 retry_post 重命名引用更新 |
-| `tests/test_profit_calc.py` | P2-3 冗余 sys.path 移除 |
-| `tests/test_text_utils.py` | P2-3 冗余 sys.path 移除 |
-| `tests/test_maishou_search.py` | P2-1 mock 名称同步 |
-| `tests/integration/__init__.py` | ➕ Arch-3 集成测试包 |
-| `tests/integration/test_cli.py` | ➕ Arch-3 CLI 端到端测试（8 用例） |
-| `pytest.ini` | ➕ P2-5 asyncio_mode = strict |
-| `pyproject.toml` | ➕ P2-7 项目配置 |
-| `SKILL.md` | 版本号 0.4.3 → 0.4.4 |
-| `CHANGELOG.md` | v0.4.4 条目 |
-
-### 审查报告 v0.4.3 最终状态
-
-| 优先级 | 总数 | 已修复 | 未采纳 |
-|:---:|:---:|:---:|:---:|
-| P0 | 1 | 1 ✅ | 0 |
-| P1 | 3 | 2 ✅ | 1 |
-| P2 | 7 | 7 ✅ | 0 |
-| Arch | 3 | 3 ✅ | 0 |
-
-P1-2（docs/ 使用说明书）因文件不存在于本地环境，已在审查报告中标注"此文档已移除，最新功能请参考 SKILL.md 和 CHANGELOG.md"。
-
-### 用户下一步建议
-
-1. **提交到 GitHub**：`git add . && git commit -m "v0.4.4: 审查报告全量修复 (P0x1 P1x2 P2x7 Archx3)" && git push`
-2. **重新注册 skill**：`ima_skill_create -d C:\Users\Saber\.workbuddy\skills\ecommerce-product-investigator`
-3. **运行测试确认**：`pytest tests/ -v` 确认 67 个用例通过
-
----
-
-## v0.4.2 增量修复
-
-基于 Saber_lily 审查报告 v0.4.0 延后项目 | 2026-05-25
-
-### TL;DR
-
-v0.4.0 审查报告延后的 **5 项问题全部完成**（1 P1 + 4 P2）。新增 3 个文件、修改 3 个文件、46 个测试全通过。
-
-### 交付概览
-
-| 维度 | 数值 |
-|:---|:---|
-| **修复总数** | 5 项 |
-| **P1 修复** | 1/1 ✅ |
-| **P2 优化** | 4/4 ✅ |
-| **变更文件** | 6 个（3 新建 + 3 修改） |
-| **单元测试** | 46 个全部通过（+13） |
-
-### 文件变更清单
-
-| 文件 | 说明 |
-|:---|:---|
-| `scripts/maishou_common.py` | P1-2 _retry_post() 提取 + search_api() 重构 |
-| `scripts/maishou_search.py` | P1-2 detail() 改用 _retry_post() |
-| `scripts/profit_calc.py` | P2-8 敏感度列宽动态计算 |
-| `tests/conftest.py` | ➕ P2-6 统一 sys.path |
-| `tests/test_maishou_common.py` | ➕ P2-4 format_table + check_env 测试（7用例） |
-| `tests/test_maishou_search.py` | ➕ P1-3 detail() 6 场景测试 |
-| `requirements-dev.txt` | ➕ P2-7 pytest + pytest-asyncio |
-| `SKILL.md` | 版本号 0.4.1 → 0.4.2 |
-| `CHANGELOG.md` | v0.4.2 条目 |
-| `delivery-summary.md` | 增量记录 |
-
-### 审查报告 v0.4.0 最终状态
-
-| 优先级 | 总数 | 已修复 | 已撤回 | 未采纳 |
-|:---:|:---:|:---:|:---:|:---:|
-| P0 | 2 | 2 ✅ | 0 | 0 |
-| P1 | 4 | 3 ✅ | 1 | 0 |
-| P2 | 8 | 6 ✅ | 0 | 2 |
-
-未采纳的 P2-1（_load_dotenv 保持现状）和 P2-3（CSV 保持原始字段）为有意决定。
-
----
-
-## v0.4.1 增量修复
-
-基于 Saber_lily 审查报告 v0.4.0 | 2026-05-25
-
-### TL;DR
-
-审查报告 v0.4.0 **6 项问题已修复**（2 P0 + 2 P1 + 2 P2）。修改 6 个文件，33 个单元测试全部通过。
-
-### 交付概览
-
-| 维度 | 数值 |
-|:---|:---|
-| **修复总数** | 6 项 |
-| **P0 修复** | 2/2 ✅ |
-| **P1 修复** | 2/2 ✅ |
-| **P2 优化** | 2/2 ✅ |
-| **变更文件** | 6 个 |
-| **单元测试** | 33 个全部通过 |
-
-### 文件变更清单
-
-| 文件 | 说明 |
-|:---|:---|
-| `scripts/profit_calc.py` | P0-1 佣金敏感度 + P0-2 最坏场景命名 |
-| `scripts/maishou_price.py` | P1-1 _display_width 导入规范化 |
-| `SKILL.md` | P1-5 --output 文档 + 版本号 0.4.0→0.4.1 |
-| `references/crossborder-guide.md` | P2-5 DE 市场 19% VAT 示例 |
-| `delivery-summary.md` | P2-2 版本号残留 + 增量记录 |
-| `CHANGELOG.md` | v0.4.1 条目 |
-| `tests/test_profit_calc.py` | 同步更新最坏场景命名断言 |
-
-### 用户下一步建议
-
-1. **提交到 GitHub**：`git add . && git commit -m "v0.4.1: 审查报告增量修复 (P0x2 P1x2 P2x2)" && git push`
-2. **重新注册 skill**：`ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator`
-3. **运行测试**：`pytest tests/ -v` 确认 33 个用例通过
-4. **下版本建议**：补充 detail() 单元测试 + 提取 _retry_post 工具函数
-
----
-
-## v0.4.0 全量修复
-
-基于 Saber_lily 审查报告 v0.3.5 | 2026-05-25
-
-### TL;DR
-
-审查报告 v0.3.5 **14 项问题 100% 完成**（3 P0 + 5 P1 + 6 P2）。新增 4 个文件、修改 8 个文件、33 个单元测试全部通过。
-
-### 交付概览
-
-| 维度 | 数值 |
-|:---|:---|
-| **修复总数** | 14 项 |
-| **P0 修复** | 3/3 ✅ |
-| **P1 修复** | 5/5 ✅ |
-| **P2 优化** | 6/6 ✅ |
-| **变更文件** | 12 个（4 新建 + 8 修改） |
-| **单元测试** | 33 个全部通过 |
-| **语法检查** | 全部通过 |
-
-### 文件变更清单
-
-| 文件 | 变更类型 | 说明 |
-|:---|:---|:---|
-| `scripts/text_utils.py` | ➕ 新建 | CJK 宽度公共工具（P1-2 消除重复代码） |
-| `tests/__init__.py` | ➕ 新建 | 测试包初始化 |
-| `tests/test_profit_calc.py` | ➕ 新建 | 利润计算 17 个测试用例（P2-1） |
-| `tests/test_text_utils.py` | ➕ 新建 | CJK 工具 16 个测试用例（P2-1） |
-| `scripts/maishou_price.py` | 🔧 修改 | Bug-1 字段映射 + Bug-3 CJK 宽度 + P2-2 logging |
-| `scripts/maishou_search.py` | 🔧 修改 | P1-3 func 参数 + P2-2 logging + P2-3 --output |
-| `scripts/maishou_common.py` | 🔧 修改 | P1-2 从 text_utils 导入（删 35 行重复代码） |
-| `scripts/profit_calc.py` | 🔧 修改 | P1-1 CJK 对齐 + P1-2 导入 + P2-2 logging + P2-4 佣金过期提醒 |
-| `references/crossborder-guide.md` | 🔧 修改 | Bug-2 利润示例补汇率浮动备用金 $0.21 |
-| `SKILL.md` | 🔧 修改 | P2-5 frontmatter description 精简 |
-| `delivery-summary.md` | 🔧 修改 | 更新到 v0.3.5（全量） |
-| `CHANGELOG.md` | 🔧 修改 | P1-5 _EnvProxy 移除注记 |
-
-### 用户下一步建议
-
-1. **提交到 GitHub**：`git add . && git commit -m "v0.3.5: 审查报告全量修复 (P0x3 P1x5 P2x6)" && git push`
-2. **重新注册 skill**：`ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator`
-3. **实测验证**：运行 `python maishou_price.py "手机支架" --format table` 确认价格列有数值
-4. **运行测试**：`pytest tests/ -v` 确认 33 个用例通过
+| 版本 | 日期 | 审查基线 | 修复 | 测试数 | 关键变更 |
+|:---|:---|:---|:---:|:---:|:---|
+| v0.4.4 | 05-26 | v0.4.3 | 12 项（P0x1 P1x2 P2x7 Archx3） | 67 | logger 修复、SensitivityVariation dataclass、集成测试框架 |
+| v0.4.2 | 05-25 | v0.4.0 延后 | 5 项（P1x1 P2x4） | 46 | _retry_post 提取、detail() 测试、敏感度列宽动态计算 |
+| v0.4.1 | 05-25 | v0.4.0 | 6 项（P0x2 P1x2 P2x2） | 33 | 佣金敏感度修正、最坏场景命名、DE VAT 示例 |
+| v0.4.0 | 05-25 | v0.3.5 | 14 项（P0x3 P1x5 P2x6） | 33 | text_utils 消除重复、CJK 对齐、logging 规范化 |
