@@ -4,6 +4,10 @@
 
 ---
 
+## v0.5.2 文档治理与分支合并（2026-11-05）
+
+按 darwin-skill 流程执行：基线 73.1（full_test）→ 终版见优化结算报告。本轮只改文档与版本控制层，铁律 5 条 / 利润公式 / references 规则内容 / 顶层结构 / 代码实现一律未动。远端只保留 main，回滚点为 backup-premerge-main-20261105 与 backup-premerge-master-20261105 两个 tag。pytest 125 passed。
+
 ## v0.5.1 审查报告残余优化
 
 基于 Saber_lily 审查报告 v0.5.0 | 2026-05-29

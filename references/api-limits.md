@@ -1,6 +1,8 @@
 # 买手 88 API 限流与速率控制
 
 > 本文档记录买手 88 API（`appapi.maishou88.com`）已知的限流规则和最佳实践。
+>
+> **最后校验：2026-11-05**（仅复核端点连通性与本文档自述口径；下方限流数值仍为经验数据，本轮未重新压测，非官方 SLA）。核法：`curl -sS -o /dev/null -w "%{http_code}" --max-time 10 https://appapi.maishou88.com/`。
 
 ## 已知限流行为
 

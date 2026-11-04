@@ -1,8 +1,10 @@
 # ecommerce-product-investigator
 
-![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen)
+> 📖 **本文面向人类读者**。Agent 一律以 `SKILL.md` 为唯一操作依据；版本、命令、参数、凭据等事实由 `SKILL.md` 单点维护。
+
+![Tests](https://img.shields.io/badge/tests-125%20passed-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Version](https://img.shields.io/badge/version-0.5.0-orange)
+![Version](https://img.shields.io/badge/version-0.5.2-orange)
 
 电商平台商品调研与选品分析工具（**国内电商 + 跨境电商双模式**）。
 
@@ -88,7 +90,7 @@ https://item.taobao.com/item.htm?id=123456789」
    │   ├── api-limits.md             # API 限流规则与状态码处理
    │   ├── commission-rates.yaml     # 佣金率数据（可直接编辑）
    │   └── changelog-archive.md      # 历史版本归档
-   └── tests/                        # 95 个测试用例
+   └── tests/                        # 125 个测试用例
    ```
 
 2. 安装依赖（如需使用脚本）：
@@ -102,7 +104,7 @@ https://item.taobao.com/item.htm?id=123456789」
    export MAISHOU_OPENID="your_open_id"
    ```
 
-4. **注册 skill**（WorkBuddy 环境必须）：
+4. **注册 skill**（WorkBuddy 环境可跳过，文件系统加载已足够）：
    ```bash
    ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator
    ```
@@ -117,13 +119,13 @@ https://item.taobao.com/item.htm?id=123456789」
 
 ```bash
 # 搜索商品（全部平台）
-python scripts/maishou_search.py search --source=0 --keyword='电脑机箱'
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" search --source=0 --keyword='电脑机箱'
 
 # 搜索指定平台（source: 1=淘宝 2=京东 3=拼多多 7=抖音 10=1688）
-python scripts/maishou_search.py search --source=2 --keyword='电脑机箱'
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" search --source=2 --keyword='电脑机箱'
 
 # 获取商品详情
-python scripts/maishou_search.py detail --source=2 --id='100012345678'
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" detail --source=2 --id='100012345678'
 ```
 
 ### `scripts/maishou_price.py`（跨境采购参考）
@@ -131,7 +133,7 @@ python scripts/maishou_search.py detail --source=2 --id='100012345678'
 基于 `appapi.maishou88.com` API，获取国内采购参考价。
 
 ```bash
-python scripts/maishou_price.py --keyword "Action Figure" --format json --limit 10
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_price.py" "Action Figure" --format json --limit 10
 ```
 
 ### `scripts/profit_calc.py`（利润计算器）
@@ -140,10 +142,10 @@ python scripts/maishou_price.py --keyword "Action Figure" --format json --limit 
 
 ```bash
 # 国内利润计算
-python scripts/profit_calc.py domestic --purchase 50 --selling 99 --shipping 5 --platform jd
+python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" domestic --purchase-price 50 --selling-price 99 --shipping 5 --platform jd
 
 # 跨境利润计算
-python scripts/profit_calc.py crossborder --purchase 30 --selling 29.99 --exchange 7.2 --market US --platform amazon
+python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-price-cny 30 --exchange-rate 7.2 --selling-price-usd 29.99 --shipping-usd 3.5 --fba-fee 4.2 --market US --platform amazon
 ```
 
 ### `scripts/monitor_store.py`（监测模式持久化）
@@ -151,9 +153,9 @@ python scripts/profit_calc.py crossborder --purchase 30 --selling 29.99 --exchan
 按品类 + 日期保存快照，支持增量对比和变化标注。存储路径 `~/.ecom-investigator/monitor/`。
 
 ```bash
-python scripts/monitor_store.py save --category "action-figure" --data '{"items": [...]}'
-python scripts/monitor_store.py diff --category "action-figure"
-python scripts/monitor_store.py list
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" save --category "action-figure" --data '{"items": [...]}'
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" diff --category "action-figure" --data '{"items": []}'
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" list
 ```
 
 ---
@@ -210,7 +212,7 @@ python scripts/monitor_store.py list
 - 抓取其他商家**后台运营数据**
 - 将采集数据**转售或做未授权营销**
 
-> 💡 详见 SKILL.md「合规提醒」章节。
+> 💡 完整合规边界见本文「合规提醒」一节；Agent 执行时另须遵守 `SKILL.md`「铁律（5 条）」。
 
 ---
 
@@ -218,6 +220,7 @@ python scripts/monitor_store.py list
 
 | 版本 | 日期 | 核心变更 |
 |:---:|:---|:---|
+| **0.5.2** | 2026-11-05 | 分支合并只保留 main；frontmatter 触发语与 compatibility；16 处命令改 CODEBUDDY_SKILL_DIR；事实校验锚与解释器自检；9 个 refs 入口补齐；README 命令与版本锚对齐；测试 125 |
 | **0.5.0** | 2026-05-29 | Session 锁竞态修复、佣金率外部化(YAML)、监测模式持久化(monitor_store.py)、快速模式编号升级提示、API 限流文档；测试 74→95 |
 | **0.4.5** | 2026-05-27 | Session 锁同步、pyproject.toml PEP 621、README 徽章、CONTRIBUTING 贡献指南、JP/UK 市场示例；测试 67→74 |
 | **0.4.4** | 2026-05-26 | logger NameError 修复、跨境 tax/commission 自动推断、SensitivityVariation dataclass、pytest.ini、集成测试；测试 58→67 |
@@ -251,4 +254,4 @@ MIT License
 
 ---
 
-*Last updated: 2026-05-29 (v0.5.0)*
+*Last updated: 2026-11-05 (v0.5.2)*

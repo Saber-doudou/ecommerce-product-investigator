@@ -5,6 +5,17 @@
 
 ---
 
+## [0.5.2] — 2026-11-05
+
+### 文档与可用性（不改变任何业务规则）
+- 分支合并：master(v0.5.1 代码) 合入 main，远端仅保留 main；保留 main 侧 .gitignore 与 docs 说明书改进
+- frontmatter：description 补 Use when 场景与触发词；新增 compatibility 声明运行时依赖
+- 命令路径：16 处脚本命令改用 ${CODEBUDDY_SKILL_DIR} 占位符并补全局基准声明，修复非技能目录 CWD 下必失败
+- 事实校验锚：新增端点 / 凭据语义 / 端点版本 / 费率 / 限流的可复制核法与解释器自检；api-limits.md 补最后校验日期
+- references：按需加载参考补齐 9 件入口（api-limits.md / commission-rates.yaml / changelog-archive.md）
+- README：修正过期命令参数、补 --data、删除悬空的「SKILL.md 合规提醒章节」引用；徽章与版本记录对齐 0.5.2 / 125 tests
+- 测试：125 passed（未新增用例）
+
 ## [0.5.1] — 2026-05-29
 
 ### 修复（P2）

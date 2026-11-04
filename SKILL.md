@@ -1,13 +1,16 @@
 ---
 name: ecommerce-product-investigator
-version: 0.5.1
-description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。
+version: 0.5.2
+description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。Use when the user asks 这个商品值不值得做 / 选品调研 / 竞品分析 / 帮我比比价 / 算一下利润, or pastes a product URL or ASIN, or needs 国内与跨境 automatic routing by platform domain. 触发词 选品、竞品调研、比价、利润测算、ASIN、BSR。
 agent_created: true
+compatibility: Requires Python 3.11+ with aiohttp and PyYAML; network access to appapi.maishou88.com; agent-browser CLI with CDP port 9222 for deep research.
 ---
 
 # ecommerce-product-investigator
 
 电商选品调研工具，**双模式自动路由**：根据用户输入自动判断国内/跨境电商，无需手动切换。
+
+> **命令路径基准**：本文所有 `python "${CODEBUDDY_SKILL_DIR}/scripts/..."` 中的 `${CODEBUDDY_SKILL_DIR}` 是平台占位符，等于当前 `SKILL.md` 所在目录的绝对路径。Agent 执行时须先展开为实际路径；在普通 shell 中手动替换该占位符，或先 `cd` 到技能根目录。**禁止假设调用者的 CWD 是技能目录**，否则脚本会报 `Errno 2`。普通 shell 请先 `export CODEBUDDY_SKILL_DIR="<技能根目录绝对路径>"` 再执行；不要写成 `VAR=value cmd "$VAR"`，同一行赋值会让变量展开成空串。
 
 **内置双引擎**：
 1. **全网比价（买手引擎）** — 调 API 快速扫描淘宝/京东/拼多多/抖音/快手/1688
@@ -105,7 +108,7 @@ agent_created: true
 ### 买手引擎：全网快速比价
 
 ```bash
-python scripts/maishou_search.py search --source=<0-10> --keyword='<商品名>'
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" search --source=<0-10> --keyword='<商品名>'
 # source: 0=全部 1=淘宝 2=京东 3=拼多多 4=苏宁 5=唯品会 6=考拉 7=抖音 8=快手 10=1688
 ```
 
@@ -144,7 +147,7 @@ curl -s http://localhost:9222/json > /dev/null 2>&1 && echo "PORT_IN_USE" || ech
 ### 采购价参考
 
 ```bash
-python scripts/maishou_price.py "关键词" --format json
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_price.py" "关键词" --format json
 # --source: 0=综合 1=淘宝 2=京东 3=拼多多 10=1688
 ```
 
@@ -174,16 +177,16 @@ python scripts/maishou_price.py "关键词" --format json
 
 ```bash
 # 保存快照
-python scripts/monitor_store.py save --category "电脑机箱" --data '{"prices": [...], "bsr": 1234}'
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" save --category "电脑机箱" --data '{"prices": [...], "bsr": 1234}'
 
 # 读取上次快照
-python scripts/monitor_store.py load --category "电脑机箱"
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" load --category "电脑机箱"
 
 # 对比增量变化（自动保存新快照）
-python scripts/monitor_store.py diff --category "电脑机箱" --data '{"prices": [...], "bsr": 2345}'
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" diff --category "电脑机箱" --data '{"prices": [...], "bsr": 2345}'
 
 # 列出所有监测品类
-python scripts/monitor_store.py list
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" list
 ```
 
 > Agent 执行监测任务时，先 load 上次快照，再跑当前数据采集，最后 diff 输出变化报告。
@@ -199,10 +202,10 @@ python scripts/monitor_store.py list
 
 ```bash
 # 手动指定扣点率
-python scripts/profit_calc.py domestic --purchase-price 80 --selling-price 159 --shipping 8 --commission-rate 0.05
+python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" domestic --purchase-price 80 --selling-price 159 --shipping 8 --commission-rate 0.05
 
 # 快捷用法（自动匹配平台扣点率）
-python scripts/profit_calc.py domestic --purchase-price 80 --selling-price 159 --shipping 8 --platform jd
+python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" domestic --purchase-price 80 --selling-price 159 --shipping 8 --platform jd
 ```
 
 ### 跨境版
@@ -214,10 +217,10 @@ python scripts/profit_calc.py domestic --purchase-price 80 --selling-price 159 -
 
 ```bash
 # 手动指定佣金率
-python scripts/profit_calc.py crossborder --purchase-price-cny 80 --exchange-rate 7.2 --selling-price-usd 29.99 --shipping-usd 3.5 --fba-fee 4.2 --commission-rate 0.15
+python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-price-cny 80 --exchange-rate 7.2 --selling-price-usd 29.99 --shipping-usd 3.5 --fba-fee 4.2 --commission-rate 0.15
 
 # 快捷用法（自动匹配平台佣金率）
-python scripts/profit_calc.py crossborder --purchase-price-cny 80 --exchange-rate 7.2 --selling-price-usd 29.99 --shipping-usd 3.5 --fba-fee 4.2 --platform amazon --market US
+python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-price-cny 80 --exchange-rate 7.2 --selling-price-usd 29.99 --shipping-usd 3.5 --fba-fee 4.2 --platform amazon --market US
 ```
 
 ⚠️ 平台佣金和税金均**基于售价**扣除，不是基于成本。用成本算佣金会导致定价偏低。
@@ -251,6 +254,26 @@ python scripts/profit_calc.py crossborder --purchase-price-cny 80 --exchange-rat
 
 > 💡 部分 WorkBuddy 版本可能需要额外执行 `ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator`。如该命令不存在，可跳过——文件系统加载已足够。
 
+### 事实校验锚
+
+> **最后校验：2026-11-05**。本节只记「可变第三方事实」的核实日期与可复制核法。事实会漂移，引用前按核法重跑，不要把结论当永久事实。
+
+| 事实 | 核实状态 | 校验方法（可复制） |
+|:---|:---|:---|
+| 买手 API 端点 `appapi.maishou88.com` | 2026-11-05 实测 `HTTP 200`，端点存活 | `curl -sS -o /dev/null -w "%{http_code}" --max-time 10 https://appapi.maishou88.com/` |
+| 凭据入口 `www.maishou88.com` | 2026-11-05 实测 TLS `SEC_E_CERT_EXPIRED`，**当前不可用** | `curl -I https://www.maishou88.com/` 看证书报错；`.env.example` 与环境变量表仍写「从 maishou88.com 获取」，引用前须复核 |
+| `MAISHOU_API_KEY` 语义 | 实为**邀请码**，脚本以 `inviteCode` 提交，非 API Key；`MAISHOU_OPENID` 对应 `openid`（2026-11-05 读码核实） | `grep -n "inviteCode\|get_invite_code\|openid" "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py"` |
+| 端点路径版本 | 搜索 `/api/v1/homepage/searchList`、详情 `/api/v3/goods/detail`、转链 `/api/v1/share/getTargetUrl`，均定义在 `scripts/maishou_common.py`（2026-11-05 读码核实） | `grep -n "SEARCH_URL\|DETAIL_URL\|TARGET_URL" "${CODEBUDDY_SKILL_DIR}/scripts/maishou_common.py"` |
+| 平台佣金率 / 扣点率 | 存于 `references/commission-rates.yaml`，**经验值，非官方 SLA** | `python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" domestic --help`，输出不得出现「加载失败」；变更直接改 YAML |
+| 限流经验值 | `references/api-limits.md` 自述「经验数据，非官方 SLA」；官方限流文档检索无果 | 读该文件「最后校验」行，不把经验值当承诺 |
+| 「✅ 已验证」「买手价 × 0.8」「京东异步渲染」 | 分别记于 2026-05-29 与 2026-11-04，**本轮未逐条重测** | 端点按上表重跑；×0.8 是估算系数，须对照实际采购报价；Route B/D 须实跑一次 CDP 采集确认 |
+
+**解释器自检与失败处置**：执行任何 `scripts/` 命令前先跑 `python -c "import importlib.util as u; print(u.find_spec('aiohttp'), u.find_spec('yaml'))"`，两项均非 `None` 才算可用。缺依赖、费率文件加载失败或凭据缺失时**必须显式报错并停止，禁止静默降级到硬编码费率，禁止把缺失数据写成 0**。
+
+> 已知残留：`scripts/profit_calc.py` 目前仍会在费率文件加载失败时**仅打 warning、回退硬编码费率并正常退出 0**（实测于 2026-11-05，缺 `yaml` 的解释器下可复现）。上面是文档侧约定，代码侧修复待单独授权，本轮未改。用系统 Python 3.13 执行可避免该情形，但仍不能把退回避作「已校验」。
+
+---
+
 ## agent-browser 工具
 
 本 skill 大量使用 `agent-browser --cdp 9222` 命令，这是 **WorkBuddy 环境内置的 CLI 工具**，用于通过 CDP 协议操作浏览器。非 WorkBuddy 环境可使用 `playwright`/`puppeteer` 替代。
@@ -264,17 +287,17 @@ python scripts/profit_calc.py crossborder --purchase-price-cny 80 --exchange-rat
 基于买手 88 API（`appapi.maishou88.com` ✅ 已验证）。
 
 ```bash
-python scripts/maishou_search.py search --source=0 --keyword='<商品名>'
-python scripts/maishou_search.py search --source=2 --keyword='<商品名>' --limit 10 --format json
-python scripts/maishou_search.py search --source=2 --keyword='<商品名>' --output result.csv
-python scripts/maishou_search.py detail --source=2 --id='<goodsId>'
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" search --source=0 --keyword='<商品名>'
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" search --source=2 --keyword='<商品名>' --limit 10 --format json
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" search --source=2 --keyword='<商品名>' --output result.csv
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" detail --source=2 --id='<goodsId>'
 ```
 
 ### `scripts/maishou_price.py`（跨境采购参考）
 
 ```bash
-python scripts/maishou_price.py "关键词" --format json
-python scripts/maishou_price.py "关键词" --limit 10
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_price.py" "关键词" --format json
+python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_price.py" "关键词" --limit 10
 ```
 
 环境变量：`MAISHOU_API_KEY`（必须）、`MAISHOU_OPENID`（必须）
@@ -293,4 +316,7 @@ python scripts/maishou_price.py "关键词" --limit 10
 | 数据采集出错、需要降级方案 | `references/fallback-guide.md` |
 | 需要按模板格式输出报告 | `references/output-template.md` |
 | 涉及跨境平台规则和差异 | `references/platform-guide.md` |
+| 遇到 429 / 限流，或需确认调用节奏（铁律 3 的执行细则） | `references/api-limits.md` |
+| 需核对或更新平台佣金率 / 扣点率 | `references/commission-rates.yaml` |
+| 需查历史版本变更记录 | `references/changelog-archive.md` |
 | 项目说明、合规提醒、快速开始 | `README.md` |
