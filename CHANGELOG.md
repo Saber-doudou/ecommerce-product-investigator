@@ -5,6 +5,24 @@
 
 ---
 
+## [0.5.1] — 2026-05-29
+
+### 修复（P2）
+- **diff_snapshot 通用字段增删检测**：除 4 个固定字段外，自动检测新增/移除的自定义字段
+- **monitor_store 单元测试**：新增 `tests/test_monitor_store.py`，25 个用例覆盖 save/load/diff/sanitize/list/format
+
+### 优化（P3）
+- **tax_rate 范围校验**：`calc_crossborder()` 添加税率 0-1 范围校验，非法值抛出 ValueError
+- **MARKET_TAX 配置化**：市场税率从 `profit_calc.py` 硬编码迁移到 `commission-rates.yaml` 的 `market_tax` 段
+- **价格格式兼容**：`diff_snapshot()` 价格对比兼容 `[100, 200]` 平面列表格式，非预期格式输出 warning
+- **maishou_price 集成测试**：新增 5 个 CLI 端到端测试（help/参数解析/格式校验）
+- **delivery-summary 精简**：历史版本汇总为表格，约精简 40%
+
+### 测试
+- 测试数 95 → 125（+25 monitor_store 单元 + 5 maishou_price 集成）
+
+---
+
 ## [0.5.0] — 2026-05-29
 
 ### 修复（P1）

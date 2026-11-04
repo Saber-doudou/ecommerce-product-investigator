@@ -9,6 +9,7 @@ SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "scripts")
 PROFIT_CALC = os.path.join(SCRIPTS_DIR, "profit_calc.py")
 MONITOR_STORE = os.path.join(SCRIPTS_DIR, "monitor_store.py")
 MAISHOU_SEARCH = os.path.join(SCRIPTS_DIR, "maishou_search.py")
+MAISHOU_PRICE = os.path.join(SCRIPTS_DIR, "maishou_price.py")
 
 
 def _run(*args):
@@ -279,3 +280,47 @@ class TestSearchCLIHelp:
         """缺少 --id 时应报错"""
         code, stdout, stderr = self._run_search("detail", "--source", "2")
         assert code != 0
+
+
+class TestMaishouPriceCLI:
+    """maishou_price.py CLI 端到端测试（不依赖 API）"""
+
+    def _run_price(self, *args):
+        result = subprocess.run(
+            [sys.executable, MAISHOU_PRICE] + list(args),
+            capture_output=True, text=True, timeout=10,
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        )
+        return result.returncode, result.stdout, result.stderr
+
+    def test_help_output(self):
+        code, stdout, stderr = self._run_price("--help")
+        assert code == 0, f"exit={code} stderr={stderr}"
+        assert "source" in stdout
+        assert "format" in stdout
+
+    def test_missing_keyword(self):
+        """缺少 positional keyword 时应报错"""
+        code, stdout, stderr = self._run_price("--source", "2")
+        assert code != 0
+
+    def test_invalid_format(self):
+        """无效 --format 值应报错"""
+        code, stdout, stderr = self._run_price("test_keyword", "--format", "xml")
+        assert code != 0
+
+    def test_valid_format_args(self):
+        """--format json/table/csv 应能被解析（即使 API 失败也先验证参数解析）"""
+        # 只测试参数解析阶段不报错，不依赖 API 成功
+        for fmt in ("table", "json", "csv"):
+            code, stdout, stderr = self._run_price("test_keyword", "--format", fmt)
+            # API 失败会导致非零退出码，但参数解析本身不应报错
+            # 验证不是 argparse 错误（argparse 错误含 "usage:"）
+            assert "usage:" not in stderr.lower(), f"format={fmt} 参数解析失败: {stderr}"
+
+    def test_limit_and_page_parsed(self):
+        """--limit 和 --page 参数应能被解析"""
+        code, stdout, stderr = self._run_price(
+            "test_keyword", "--limit", "5", "--page", "2", "--format", "json"
+        )
+        assert "usage:" not in stderr.lower(), f"参数解析失败: {stderr}"

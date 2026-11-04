@@ -15,4 +15,10 @@ crossborder:
   tiktok: 0.06
   temu: 0.05
 
+market_tax:
+  US: 0.0
+  DE: 0.19
+  JP: 0.10
+  UK: 0.20
+
 ref_date: "2026-05"

@@ -27,11 +27,14 @@ monitor_store.py - 电商选品监测数据持久化
 
 import argparse
 import json
+import logging
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_STORE_DIR = Path.home() / ".ecom-investigator" / "monitor"
 
@@ -144,9 +147,23 @@ def diff_snapshot(
         prev_prices = prev_data["prices"]
         curr_prices = current_data["prices"]
         if isinstance(prev_prices, list) and isinstance(curr_prices, list):
-            prev_avg = sum(p.get("price", 0) for p in prev_prices) / len(prev_prices) if prev_prices else 0
-            curr_avg = sum(p.get("price", 0) for p in curr_prices) / len(curr_prices) if curr_prices else 0
-            if curr_avg != prev_avg:
+            # 检测 prices 元素格式，兼容 [{"price": 100}] 和 [100]
+            prev_sample = prev_prices[0] if prev_prices else None
+            curr_sample = curr_prices[0] if curr_prices else None
+            if isinstance(prev_sample, dict) and isinstance(curr_sample, dict):
+                prev_avg = sum(p.get("price", 0) for p in prev_prices) / len(prev_prices) if prev_prices else 0
+                curr_avg = sum(p.get("price", 0) for p in curr_prices) / len(curr_prices) if curr_prices else 0
+            elif isinstance(prev_sample, (int, float)) and isinstance(curr_sample, (int, float)):
+                prev_avg = sum(prev_prices) / len(prev_prices) if prev_prices else 0
+                curr_avg = sum(curr_prices) / len(curr_prices) if curr_prices else 0
+            else:
+                logger.warning(
+                    "prices 格式不兼容，跳过价格对比。期望 [{\"price\": N}] 或 [N]，实际 prev=%s curr=%s",
+                    type(prev_sample).__name__ if prev_sample else "empty",
+                    type(curr_sample).__name__ if curr_sample else "empty",
+                )
+                prev_avg, curr_avg = None, None
+            if prev_avg is not None and curr_avg is not None and curr_avg != prev_avg:
                 diff_pct = (curr_avg - prev_avg) / prev_avg * 100 if prev_avg else 0
                 direction = "↑" if diff_pct > 0 else "↓"
                 changes.append({
@@ -156,6 +173,11 @@ def diff_snapshot(
                     "delta": round(curr_avg - prev_avg, 2),
                     "delta_pct": f"{direction} {abs(diff_pct):.1f}%",
                 })
+        else:
+            logger.warning(
+                "prices 字段应为 list 类型，当前 prev=%s curr=%s，跳过价格对比",
+                type(prev_prices).__name__, type(curr_prices).__name__,
+            )
 
     # 竞品数量变化
     if "competitor_count" in current_data and "competitor_count" in prev_data:
@@ -229,6 +251,24 @@ def diff_snapshot(
                 except (TypeError, ValueError):
                     pass
 
+    # 新增/删除字段检测
+    prev_keys = set(prev_data.keys())
+    curr_keys = set(current_data.keys())
+    for key in sorted(curr_keys - prev_keys):
+        changes.append({
+            "field": key,
+            "previous": None,
+            "current": current_data[key],
+            "delta": "新增",
+        })
+    for key in sorted(prev_keys - curr_keys):
+        changes.append({
+            "field": key,
+            "previous": prev_data[key],
+            "current": None,
+            "delta": "移除",
+        })
+
     if not changes:
         changes.append({"field": "_no_change", "message": "各项数据与上次相比无明显变化"})
 
@@ -272,6 +312,10 @@ def format_changes(diff_result: dict) -> str:
             lines.append("✅ 各项数据与上次相比无明显变化")
         elif field == "_first_run":
             lines.append("🆕 首次监测，已保存基准数据")
+        elif change.get("delta") == "新增":
+            lines.append(f"  🆕 {change['field']}: {change['current']}（新字段）")
+        elif change.get("delta") == "移除":
+            lines.append(f"  ❌ {change['field']}: {change['previous']}（已移除）")
         elif "delta_pct" in change:
             if "description" in change:
                 lines.append(f"  {change['field']}: {change['description']}")
