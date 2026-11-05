@@ -2,9 +2,9 @@
 
 > 📖 **本文面向人类读者**。Agent 一律以 `SKILL.md` 为唯一操作依据；本文命令示例与 `SKILL.md` 同源，若不一致以 `SKILL.md` 为准。
 
-![Tests](https://img.shields.io/badge/tests-130%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-148%20passed-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Version](https://img.shields.io/badge/version-0.5.3-orange)
+![Version](https://img.shields.io/badge/version-0.5.4-orange)
 
 电商平台商品调研与选品分析工具（**国内电商 + 跨境电商双模式**）。
 
@@ -68,7 +68,7 @@ https://item.taobao.com/item.htm?id=123456789」
    ```
    .workbuddy/skills/ecommerce-product-investigator/
    ├── SKILL.md                      # 技能定义（Agent 入口）
-   ├── CHANGELOG.md                  # 最近 3 版本变更记录
+   ├── CHANGELOG.md                  # 最近若干版本变更记录（完整列表见本文件）
    ├── README.md                     # 本文件
    ├── CONTRIBUTING.md               # 贡献指南
    ├── pyproject.toml                # 项目元数据与依赖
@@ -90,15 +90,15 @@ https://item.taobao.com/item.htm?id=123456789」
    │   ├── api-limits.md             # API 限流规则与状态码处理
    │   ├── commission-rates.yaml     # 佣金率数据（可直接编辑）
    │   └── changelog-archive.md      # 历史版本归档
-   └── tests/                        # 130 个测试用例
+   └── tests/                        # 148 个测试用例
    ```
 
 2. 安装依赖（如需使用脚本）：
    ```bash
-   pip install -r "${CODEBUDDY_SKILL_DIR}/scripts/requirements.txt"
+   cd <技能根目录> && pip install -r ./scripts/requirements.txt
    ```
 
-3. 配置环境变量（跨境模式可选）：
+3. 配置环境变量（国内比价与跨境采购均必须）：
    ```bash
    export MAISHOU_API_KEY="your_api_key"
    export MAISHOU_OPENID="your_open_id"
@@ -153,7 +153,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-pr
 按品类 + 日期保存快照，支持增量对比和变化标注。存储路径 `~/.ecom-investigator/monitor/`。
 
 ```bash
-python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" save --category "action-figure" --data '{"items": [...]}'
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" save --category "action-figure" --data '{"items": [{"price": 100}]}'
 python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" diff --category "action-figure" --data '{"items": []}'
 python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" list
 ```
@@ -168,7 +168,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" list
 | `references/crossborder-guide.md` | 跨境 4 阶段引擎、单点查询、监测模式详解 | 跨境模式深度调研时 |
 | `references/platform-guide.md` | 跨境平台差异速查（Amazon/Shopee/TikTok Shop/Temu） | 跨境报告输出前 |
 | `references/output-template.md` | 输出模板（快速扫描/深度报告/单点查询/监测报告） | 输出报告时 |
-| `references/fallback-guide.md` | 降级链（API→Web Search→CDP🧪→手动）+ 精度标注 | 数据采集出错时 |
+| `references/fallback-guide.md` | 降级链（API→Web Search→CDP 实验性默认不启用→手动）+ 精度标注 | 数据采集出错时 |
 | `references/cdp-setup.md` | CDP 浏览器自动化配置指南 | 需要连接本地浏览器时 |
 | `references/api-limits.md` | API 限流规则、状态码处理策略 | 调用频率受限时 |
 | `references/commission-rates.yaml` | 各平台佣金率数据（唯一事实源，可直接编辑；加载失败代码显式报错退出） | 需要更新佣金率时 |
@@ -220,6 +220,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" list
 
 | 版本 | 日期 | 核心变更 |
 |:---:|:---|:---|
+| **0.5.4** | 2026-11-05 | 严格审查 46 项收口：修崩溃与错误定价、统一采集优先级与重试口径、补 18 个边界用例、清文档矛盾；测试 130 至 148 |
 | **0.5.3** | 2026-11-05 | 移除硬编码费率副本与静默降级，加载失败显式报错退出 2；未知平台 / 市场不再套默认值；过期检测可注入日期；合规边界收进 SKILL.md；docs / README / 环境变量文档自洽；安装副本同步零分叉；测试 125 至 130 |
 | **0.5.2** | 2026-11-05 | 分支合并只保留 main；frontmatter 触发语与 compatibility；16 处命令改 CODEBUDDY_SKILL_DIR；事实校验锚与解释器自检；9 个 refs 入口补齐；README 命令与版本锚对齐；测试 125 |
 | **0.5.0** | 2026-05-29 | Session 锁竞态修复、佣金率外部化(YAML)、监测模式持久化(monitor_store.py)、快速模式编号升级提示、API 限流文档；测试 74→95 |
@@ -255,4 +256,4 @@ MIT License
 
 ---
 
-*Last updated: 2026-11-05 (v0.5.3)*
+*Last updated: 2026-11-05 (v0.5.4)*

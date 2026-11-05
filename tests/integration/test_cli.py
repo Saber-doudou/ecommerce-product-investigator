@@ -246,7 +246,8 @@ class TestMonitorStoreCLI:
         )
         assert code == 0, f"exit={code} stderr={stderr}"
         # should detect price change
-        assert "price" in stdout.lower() or "首次" not in stdout
+        payload = json.loads(stdout.split(chr(10) * 2, 1)[0])
+        assert any(c.get("field") == "price" for c in payload["changes"]), stdout
 
     def test_list(self, tmp_path):
         store = str(tmp_path / "monitor")

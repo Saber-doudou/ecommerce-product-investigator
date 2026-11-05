@@ -101,7 +101,7 @@ def check_commission_staleness(today=None) -> list[str]:
         ref = datetime.strptime(COMMISSION_REF_DATE, "%Y-%m")
         now = today or datetime.now()
         months = (now.year - ref.year) * 12 + (now.month - ref.month)
-        if months > _COMMISSION_STALENESS_MONTHS:
+        if months >= _COMMISSION_STALENESS_MONTHS:
             warnings.append(
                 f"⚠️ 佣金率参考日期为 {COMMISSION_REF_DATE}（已过 {months} 个月），"
                 f"请确认 references/commission-rates.yaml 中费率为最新"
@@ -201,6 +201,9 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
     if shipping < 0:
         raise ValueError("运费不能为负数")
     _check_rates_or_raise()
+    rate_source = ("显式指定 --commission-rate" if commission_rate is not None
+                     else (f"平台 {platform}（commission-rates.yaml）" if platform
+                          else "默认假设（未指定平台/费率）"))
     if commission_rate is None and platform:
         key = platform.lower()
         if key not in DOMESTIC_COMMISSION:
@@ -209,14 +212,17 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
     elif commission_rate is None:
         commission_rate = _UNSPECIFIED_DOMESTIC_RATE
 
+    if not (0 <= commission_rate <= 1):
+        raise ValueError(f"佣金率必须在 0 至 1 之间（含边界），当前值: {commission_rate}")
+
     commission = selling_price * commission_rate
     total_cost = purchase_price + shipping + commission
     profit = selling_price - total_cost
     profit_rate = profit / selling_price * 100 if selling_price > 0 else 0
 
     # 保本售价
-    divisor_d = 1 - commission_rate if commission_rate < 1 else float("inf")
-    break_even_price = (purchase_price + shipping) / divisor_d if divisor_d > 0 else float("inf")
+    # 佣金率达到 100% 时永远无法保本，不能用 inf（会输出 0 元 / 非法 JSON）
+    break_even_price = None if commission_rate >= 1 else (purchase_price + shipping) / (1 - commission_rate)
 
     def _calc(pp, sp, sh, cr):
         comm = sp * cr
@@ -250,6 +256,8 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
         ),
     ]
 
+    if break_even_price is None:
+        variations = [v for v in variations if v.name != "保本售价"]
     sensitivity = _sensitivity(_calc, base, variations)
 
     # 最坏场景：售价 -10% + 采购价 +10%
@@ -267,9 +275,10 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
         "平台扣点": round(commission, 2),
         "总成本": round(total_cost, 2),
         "售价": selling_price,
-        "保本售价": round(break_even_price, 2),
+        "保本售价": round(break_even_price, 2) if break_even_price is not None else None,
         "利润": round(profit, 2),
-        "利润率": f"{profit_rate:.1f}%",
+        "利润率": f"{profit_rate:.1f}%" if selling_price > 0 else "不适用（售价为 0）",
+        "费率来源": rate_source,
         "敏感度分析": {**sensitivity, **worst},
     }
 
@@ -313,10 +322,13 @@ def calc_crossborder(
         raise ValueError("运费不能为负数")
     if fba_fee < 0:
         raise ValueError("FBA费不能为负数")
-    if tax_rate is not None and not (0 <= tax_rate < 1):
-        raise ValueError(f"税率必须在 0-1 之间（如 0.19=19%），当前值: {tax_rate}")
+    if tax_rate is not None and not (0 <= tax_rate <= 1):
+        raise ValueError(f"税率必须在 0 至 1 之间（含边界），当前值: {tax_rate}")
 
     _check_rates_or_raise()
+    rate_source = ("显式指定 --commission-rate" if commission_rate is not None
+                     else (f"平台 {platform}（commission-rates.yaml）" if platform
+                          else "默认假设（未指定平台/费率）"))
     # 自动推断佣金率：platform → commission_rate（仅在 commission_rate 未显式指定时生效）
     if commission_rate is None and platform:
         key = platform.lower()
@@ -333,12 +345,15 @@ def calc_crossborder(
             raise ValueError(f"未知市场 {market!r}，可用市场: {', '.join(sorted(MARKET_TAX))}")
         tax_rate = MARKET_TAX[key]
 
+    if not (0 <= commission_rate <= 1):
+        raise ValueError(f"佣金率必须在 0 至 1 之间（含边界），当前值: {commission_rate}")
+
     purchase_price_usd = purchase_price_cny / exchange_rate
     buffer = purchase_price_usd * exchange_buffer
     unit_cost = purchase_price_usd + shipping_usd + fba_fee + buffer
     # 保本售价
     divisor = 1 - commission_rate - tax_rate
-    break_even_price = unit_cost / divisor if divisor > 0 else float("inf")
+    break_even_price = unit_cost / divisor if divisor > 0 else None
 
     # 实际利润
     commission = selling_price_usd * commission_rate
@@ -413,6 +428,8 @@ def calc_crossborder(
         ),
     ]
 
+    if break_even_price is None:
+        variations = [v for v in variations if v.name != "保本售价"]
     sensitivity = _sensitivity(_calc, base, variations)
 
     # 最坏场景：售价 -10% + 汇率 +5%（人民币贬值）
@@ -435,12 +452,13 @@ def calc_crossborder(
         "单位硬性成本": round(unit_cost, 2),
         "平台佣金率": f"{commission_rate*100:.1f}%",
         "税率": f"{tax_rate*100:.1f}%",
-        "保本售价": round(break_even_price, 2),
+        "保本售价": round(break_even_price, 2) if break_even_price is not None else None,
         "实际售价": selling_price_usd,
         "平台佣金": round(commission, 2),
         "税金": round(tax, 2),
         "单件利润": round(profit, 2),
-        "利润率": f"{profit_rate:.1f}%",
+        "利润率": f"{profit_rate:.1f}%" if selling_price_usd > 0 else "不适用（售价为 0）",
+        "费率来源": rate_source,
         "敏感度分析": {**sensitivity, **worst},
     }
 
@@ -448,8 +466,11 @@ def calc_crossborder(
 # ── 输出格式化 ──
 
 def format_output(result, fmt="table"):
+    if result.get("保本售价") is None:
+        result = dict(result)
+        result["保本售价说明"] = "佣金与税率合计达到或超过 100%，无法保本"
     if fmt == "json":
-        return json.dumps(result, ensure_ascii=False, indent=2)
+        return json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False)
 
     lines = []
     lines.append(f"\n{'='*50}")
@@ -459,7 +480,8 @@ def format_output(result, fmt="table"):
     skip_keys = {"模式", "敏感度分析"}
     for k, v in result.items():
         if k not in skip_keys:
-            lines.append(f"  {_pad_str_local(k, 20)} {v}")
+            shown = "无法保本" if v is None else v
+            lines.append(f"  {_pad_str_local(k, 20)} {shown}")
 
     # 敏感度分析
     sensitivity = result.get("敏感度分析", {})

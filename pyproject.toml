@@ -1,6 +1,6 @@
 [project]
 name = "ecommerce-product-investigator"
-version = "0.5.3"
+version = "0.5.4"
 description = "电商选品调研工具 — 国内+跨境双模式，支持全网比价和深度调研"
 requires-python = ">=3.11"
 authors = [{name = "Saber-doudou"}]
@@ -25,7 +25,4 @@ dev = [
     "pytest-asyncio>=0.24",
 ]
 
-[tool.pytest.ini_options]
-asyncio_mode = "strict"
-testpaths = ["tests"]
-python_files = "test_*.py"
+# pytest 配置统一由 pytest.ini 维护，此处不再重复。

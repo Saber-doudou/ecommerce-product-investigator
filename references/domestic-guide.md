@@ -146,7 +146,7 @@ agent-browser --cdp 9222 snapshot -i | grep -E "参数|规格|起批量|批发�
 
 ---
 
-## 闲鱼（xianyu.com）
+## 闲鱼（goofish.com）
 
 ### 参数提取规则
 
@@ -156,7 +156,7 @@ agent-browser --cdp 9222 snapshot -i | grep -E "参数|规格|起批量|批发�
 
 ```bash
 # 闲鱼商品页 URL 格式
-# https://www.xianyu.com/item.htm?id=<ID>
+# https://www.goofish.com/item?id=<ID>（商品页路径格式未实测，以实际页面为准）
 
 # 参数在商品描述区域（非结构化）
 agent-browser --cdp 9222 snapshot -i | grep -E "品牌|型号|成色|购买时间|配件"

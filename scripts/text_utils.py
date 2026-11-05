@@ -11,26 +11,21 @@ text_utils.py - 中英文混排文本工具（零外部依赖）
 import unicodedata
 
 
+def _char_width(ch: str) -> int:
+    """单字符显示宽度：display_width 与 pad_str 截断共用同一口径。"""
+    cp = ord(ch)
+    if (0x1F300 <= cp <= 0x1F9FF or 0x2600 <= cp <= 0x26FF
+            or 0x2700 <= cp <= 0x27BF or 0xFE00 <= cp <= 0xFE0F
+            or unicodedata.east_asian_width(ch) in ("W", "F")):
+        return 2
+    return 1
+
+
 def display_width(s: str) -> int:
-    """计算字符串的终端显示宽度（CJK 字符占 2 列，ASCII 占 1 列）。
-    Emoji/符号范围硬编码为 2 列，因 unicodedata.east_asian_width() 对其返回不稳定。
-    """
-    w = 0
-    for ch in s:
-        cp = ord(ch)
-        # Emoji & 符号范围（U+1F300–U+1F9FF, U+2600–U+26FF, U+2700–U+27BF, U+FE00–U+FE0F）
-        if (
-            0x1F300 <= cp <= 0x1F9FF
-            or 0x2600 <= cp <= 0x26FF
-            or 0x2700 <= cp <= 0x27BF
-            or 0xFE00 <= cp <= 0xFE0F
-        ):
-            w += 2
-        elif unicodedata.east_asian_width(ch) in ("W", "F"):
-            w += 2
-        else:
-            w += 1
-    return w
+    """计算终端显示宽度；None/空值按 0 处理，避免上游 null 字段崩溃。"""
+    if s is None:
+        return 0
+    return sum(_char_width(ch) for ch in str(s))
 
 
 def pad_str(s: str, width: int, align: str = "<") -> str:
@@ -49,7 +44,7 @@ def pad_str(s: str, width: int, align: str = "<") -> str:
         result = ""
         cur = 0
         for ch in s:
-            chw = 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+            chw = _char_width(ch)
             if cur + chw > width:
                 remaining = width - cur
                 if remaining >= 1:

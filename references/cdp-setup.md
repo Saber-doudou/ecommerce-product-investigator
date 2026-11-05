@@ -130,6 +130,7 @@ curl -s http://localhost:9222/json/version | head -5
 |:---:|:---|
 | PORT_IN_USE（9222被占用 + 返回JSON） | ✅ 直接复用，跳过启动步骤 |
 | PORT_IN_USE（9222被非浏览器占用） | 尝试备选端口（9223/9224） |
+> 切换端口后，本文档后续所有 `agent-browser --cdp 9222` 命令须同步替换为新端口。
 | PORT_FREE（9222空闲） | 继续启动浏览器流程 |
 
 ### 备选端口
@@ -168,7 +169,7 @@ done
 
 ```bash
 # 快速检查当前打开的标签页
-curl -s http://localhost:9222/json | python3 -c "
+curl -s http://localhost:9222/json | python -c "
 import json, sys
 tabs = json.load(sys.stdin)
 for t in tabs:
@@ -281,7 +282,7 @@ agent-browser --cdp 9222 tab close 2
 | 问题 | 原因 | 解决 |
 |:---|:---|:---|
 | Connection refused | 浏览器未以调试模式启动 | 完全退出浏览器后加 `--remote-debugging-port=9222` 重启 |
-| 端口被占用 | 已有实例在使用 9222 | `taskkill /F /IM chrome.exe` 或换端口 9223/9224 |
+| 端口被占用 | 已有实例在使用 9222 | 换端口 9223/9224；确需 taskkill /F /IM chrome.exe 前先保存工作（会关闭全部 Chrome 窗口） |
 | "元素已失效" | 页面变化后 ref 过期 | 重新 snapshot 再操作 |
 | 登录态丢失 | 使用了新的 user-data-dir | 每次用同一个 user-data-dir，或复用默认 profile |
 | 页面加载超时 | 网络慢或页面过重 | 增加等待时间，或降级到 web search |

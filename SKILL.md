@@ -1,9 +1,9 @@
 ---
 name: ecommerce-product-investigator
-version: 0.5.3
+version: 0.5.4
 description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。Use when the user asks 这个商品值不值得做 / 选品调研 / 竞品分析 / 帮我比比价 / 算一下利润, or pastes a product URL or ASIN, or needs 国内与跨境 automatic routing by platform domain. 触发词 选品、竞品调研、比价、利润测算、ASIN、BSR。
 agent_created: true
-compatibility: Requires Python 3.11+ with aiohttp and PyYAML; network access to appapi.maishou88.com; agent-browser CLI with CDP port 9222 for deep research.
+compatibility: Requires Python 3.11+; aiohttp and PyYAML are needed by the 买手 API scripts only (profit_calc / monitor_store have no third-party deps); network access to appapi.maishou88.com; agent-browser CLI with CDP port 9222 for deep research.
 ---
 
 # ecommerce-product-investigator
@@ -13,7 +13,7 @@ compatibility: Requires Python 3.11+ with aiohttp and PyYAML; network access to 
 > **命令路径基准**：本文所有 `python "${CODEBUDDY_SKILL_DIR}/scripts/..."` 中的 `${CODEBUDDY_SKILL_DIR}` 是平台占位符，等于当前 `SKILL.md` 所在目录的绝对路径。Agent 执行时须先展开为实际路径；在普通 shell 中手动替换该占位符，或先 `cd` 到技能根目录。**禁止假设调用者的 CWD 是技能目录**，否则脚本会报 `Errno 2`。普通 shell 请先 `export CODEBUDDY_SKILL_DIR="<技能根目录绝对路径>"` 再执行；不要写成 `VAR=value cmd "$VAR"`，同一行赋值会让变量展开成空串。
 
 **内置双引擎**：
-1. **全网比价（买手引擎）** — 调 API 快速扫描淘宝/京东/拼多多/抖音/快手/1688
+1. **全网比价（买手引擎）** — 调 API 快速扫描淘宝/京东/拼多多/抖音/快手/1688 等 9 个平台
 2. **深度调研（CDP 引擎）** — 登录态直读商品详情页，获取完整规格参数和用户评价
 
 ---
@@ -140,7 +140,7 @@ curl -s http://localhost:9222/json > /dev/null 2>&1 && echo "PORT_IN_USE" || ech
 
 **4 阶段引擎**：
 1. **前置收集**：产品关键词/ASIN + 目标市场（默认 US）+ 目标平台（默认 Amazon）
-2. **数据采集**：API（maishou_price.py）→ CDP → Web Search，采集竞品价格/Review/BSR/利润链
+2. **数据采集**：API（maishou_price.py）→ Web Search → CDP（境外站实验性，默认不启用），采集竞品价格/Review/BSR/利润链
 3. **深度分析**：市场吸引力 + 竞争格局 + 利润可行性 + 风险因素，含确认门
 4. **报告生成**：按 `references/output-template.md` 输出，明确建议（做/不做/需验证）
 
@@ -163,7 +163,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_price.py" "关键词" --format js
 |:---|:---|
 | 利润测算 | 给定采购价+售价，计算利润链 |
 | BSR 查询 | 给定 ASIN 查排名 |
-| 竞品比价 | 给定关键词查 TOP10 价格 |
+| 竞品比价 | 给定关键词查各平台前 N 条价格（--limit 为每平台上限） |
 
 ---
 
@@ -177,13 +177,13 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_price.py" "关键词" --format js
 
 ```bash
 # 保存快照
-python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" save --category "电脑机箱" --data '{"prices": [...], "bsr": 1234}'
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" save --category "电脑机箱" --data '{"prices": [{"price": 100}], "bsr": 1234}'
 
 # 读取上次快照
 python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" load --category "电脑机箱"
 
 # 对比增量变化（自动保存新快照）
-python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" diff --category "电脑机箱" --data '{"prices": [...], "bsr": 2345}'
+python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" diff --category "电脑机箱" --data '{"prices": [{"price": 110}], "bsr": 2345}'
 
 # 列出所有监测品类
 python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" list
@@ -231,7 +231,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-pr
 
 1. **CDP 引擎必须先提示用户登录** — 不可跳过，未登录数据不完整
 2. **买手引擎是加速器不是必选项** — 失败了不影响最终结果，CDP 能兜底
-3. **降级不阻塞流程** — 同一方案失败 ≤2 次即降级，宁可用 80% 数据出报告
+3. **降级不阻塞流程** — 总尝试 2 次（1 原始 + 1 重试）即降级，宁可用 80% 数据出报告
 4. **缺失字段标注"未检索到"** — 绝不猜测填充，每个字段标注数据来源和精度
 5. **跨境利润计算** — 佣金和税金基于售价，使用前务必确认公式正确性
 
@@ -280,7 +280,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-pr
 
 **解释器自检与失败处置**：执行任何 `scripts/` 命令前先跑 `python -c "import importlib.util as u; print(u.find_spec('aiohttp'), u.find_spec('yaml'))"`，两项均非 `None` 才算可用。缺依赖、费率文件加载失败或凭据缺失时**必须显式报错并停止，禁止静默降级到硬编码费率，禁止把缺失数据写成 0**。
 
-> **v0.5.3 已闭环**：`scripts/profit_calc.py` 已移除全部硬编码费率副本，加载失败抛 `CommissionRatesError`、CLI 以退出码 2 停止。上面「必须显式报错并停止」已是代码实际行为，本条不再是残留。
+> **v0.5.3 起已闭环**：`scripts/profit_calc.py` 已移除全部硬编码费率副本，加载失败抛 `CommissionRatesError`、CLI 以退出码 2 停止。上面「必须显式报错并停止」已是代码实际行为，本条不再是残留。
 
 ---
 

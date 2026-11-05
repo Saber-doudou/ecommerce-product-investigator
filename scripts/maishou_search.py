@@ -35,9 +35,8 @@ import argparse
 logger = logging.getLogger(__name__)
 
 from maishou_common import (
-    SEARCH_URL, DETAIL_URL, TARGET_URL,
-    SOURCE_MAP, TIMEOUT,
-    get_invite_code, get_openid, get_headers_app,
+    DETAIL_URL, TARGET_URL,
+    get_invite_code,
     get_session, close_session, check_env, format_table,
     search_api, retry_post,
 )
@@ -54,18 +53,18 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
 
     if error:
         fmt = kwargs.get("format", "csv")
-        return json.dumps({"error": error}, ensure_ascii=False) if fmt == "json" else f"❌ {error}"
+        return json.dumps({"items": [], "error": error}, ensure_ascii=False) if fmt == "json" else f"❌ {error}"
 
     if not items:
         msg = "查询结果为空"
-        return json.dumps({"error": msg}, ensure_ascii=False) if kwargs.get("format") == "json" else f"❌ {msg}"
+        return json.dumps({"items": [], "error": msg}, ensure_ascii=False) if kwargs.get("format") == "json" else f"❌ {msg}"
 
     rows = [
         {
             "idx": i,
             "goodsId": v.get("goodsId"),
             "source": v.get("sourceType"),
-            "title": v.get("title"),
+            "title": v.get("title") or "",
             "shopName": v.get("shopName"),
             "originalPrice": v.get("originalPrice"),
             "actualPrice": v.get("actualPrice"),
@@ -90,7 +89,7 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
         for r in rows:
             display_rows.append({
                 "#": r["idx"],
-                "商品名": r.get("title", ""),
+                "商品名": r.get("title") or "",
                 "价格": str(r.get("actualPrice") or r.get("originalPrice") or "?"),
                 "销量": str(r.get("monthSales", "")),
                 "店铺": (r.get("shopName") or ""),
@@ -100,7 +99,7 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
         if not rows:
             return "未找到结果"
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))
+        writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()), lineterminator="\n")
         writer.writeheader()
         for item in rows:
             writer.writerow(item)
@@ -130,6 +129,8 @@ async def detail(id: str, source: int, **kwargs) -> str:
     )
     if error:
         return f"❌ {error}"
+    if isinstance(data, dict) and data.get("code") not in (None, 200):
+        return f"❌ {data.get('message') or '接口返回异常'}"
     detail_data = (data.get("data") or {}) if isinstance(data, dict) else {}
 
     # 第二步：获取分享链接（非致命，失败只警告）

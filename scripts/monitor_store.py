@@ -41,7 +41,10 @@ DEFAULT_STORE_DIR = Path.home() / ".ecom-investigator" / "monitor"
 
 def _sanitize_category(category: str) -> str:
     """将品类名转为安全的目录名"""
-    return category.strip().replace("/", "_").replace("\\", "_").replace(" ", "_")
+    # 白名单：字母/数字/中文/下划线/连字符，其余替换；拒绝 . 与 .. 防路径穿越
+    safe = "".join(ch if (ch.isalnum() or ch in "-_") else "_" for ch in (category or "").strip())
+    safe = safe.strip("._")
+    return safe or "unnamed"
 
 
 def _store_dir(store_root: Path, category: str) -> Path:
@@ -151,8 +154,8 @@ def diff_snapshot(
             prev_sample = prev_prices[0] if prev_prices else None
             curr_sample = curr_prices[0] if curr_prices else None
             if isinstance(prev_sample, dict) and isinstance(curr_sample, dict):
-                prev_avg = sum(p.get("price", 0) for p in prev_prices) / len(prev_prices) if prev_prices else 0
-                curr_avg = sum(p.get("price", 0) for p in curr_prices) / len(curr_prices) if curr_prices else 0
+                prev_avg = sum((p.get("price") or 0) for p in prev_prices) / len(prev_prices) if prev_prices else 0
+                curr_avg = sum((p.get("price") or 0) for p in curr_prices) / len(curr_prices) if curr_prices else 0
             elif isinstance(prev_sample, (int, float)) and isinstance(curr_sample, (int, float)):
                 prev_avg = sum(prev_prices) / len(prev_prices) if prev_prices else 0
                 curr_avg = sum(curr_prices) / len(curr_prices) if curr_prices else 0
@@ -164,14 +167,18 @@ def diff_snapshot(
                 )
                 prev_avg, curr_avg = None, None
             if prev_avg is not None and curr_avg is not None and curr_avg != prev_avg:
-                diff_pct = (curr_avg - prev_avg) / prev_avg * 100 if prev_avg else 0
-                direction = "↑" if diff_pct > 0 else "↓"
+                delta = curr_avg - prev_avg
+                direction = "↑" if delta > 0 else "↓"
+                if prev_avg:
+                    delta_pct = f"{direction} {abs(delta / prev_avg * 100):.1f}%"
+                else:
+                    delta_pct = f"{direction} 绝对值 {abs(delta):.2f}（基期为 0，不适用百分比）"
                 changes.append({
                     "field": "price",
                     "previous": round(prev_avg, 2),
                     "current": round(curr_avg, 2),
                     "delta": round(curr_avg - prev_avg, 2),
-                    "delta_pct": f"{direction} {abs(diff_pct):.1f}%",
+                    "delta_pct": delta_pct,
                 })
         else:
             logger.warning(
@@ -233,13 +240,13 @@ def diff_snapshot(
                 try:
                     if isinstance(curr_val, (int, float)) and isinstance(prev_val, (int, float)):
                         delta = curr_val - prev_val
-                        pct = delta / prev_val * 100 if prev_val else 0
+                        pct = delta / prev_val * 100 if prev_val else None
                         changes.append({
                             "field": key,
                             "previous": prev_val,
                             "current": curr_val,
                             "delta": round(delta, 2),
-                            "delta_pct": f"{'+' if delta > 0 else ''}{pct:.1f}%",
+                            "delta_pct": (f"{'+' if delta > 0 else ''}{pct:.1f}%" if pct is not None else f"绝对值 {delta:+.2f}（基期为 0）"),
                         })
                     else:
                         changes.append({
@@ -303,7 +310,8 @@ def format_changes(diff_result: dict) -> str:
         return "\n".join(lines)
 
     prev_date = diff_result.get("previous_date", "?")
-    lines.append(f"对比基准：{prev_date}")
+    same_day = "（同日增量）" if prev_date == datetime.now().strftime("%Y-%m-%d") else ""
+    lines.append(f"对比基准：{prev_date}{same_day}")
     lines.append("")
 
     for change in diff_result.get("changes", []):
@@ -316,18 +324,30 @@ def format_changes(diff_result: dict) -> str:
             lines.append(f"  🆕 {change['field']}: {change['current']}（新字段）")
         elif change.get("delta") == "移除":
             lines.append(f"  ❌ {change['field']}: {change['previous']}（已移除）")
+        elif "description" in change:
+            lines.append(f"  {change['field']}: {change['description']}")
         elif "delta_pct" in change:
-            if "description" in change:
-                lines.append(f"  {change['field']}: {change['description']}")
-            else:
-                lines.append(
-                    f"  {change['field']}: {change['previous']} → {change['current']} "
-                    f"({change['delta_pct']})"
-                )
+            lines.append(
+                f"  {change['field']}: {change['previous']} → {change['current']} "
+                f"({change['delta_pct']})"
+            )
         else:
             lines.append(f"  {change['field']}: {change['previous']} → {change['current']}")
 
     return "\n".join(lines)
+
+
+def _parse_data(raw: str) -> dict:
+    """解析 --data，非法 JSON 给出友好提示并以退出码 2 结束。"""
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as e:
+        print(f"错误：--data 不是合法 JSON: {e}", file=sys.stderr)
+        sys.exit(2)
+    if not isinstance(value, dict):
+        print("错误：--data 必须是 JSON 对象", file=sys.stderr)
+        sys.exit(2)
+    return value
 
 
 def main():
@@ -361,7 +381,7 @@ def main():
     store_root = Path(args.store_dir) if getattr(args, "store_dir", None) else None
 
     if args.command == "save":
-        data = json.loads(args.data)
+        data = _parse_data(args.data)
         result = save_snapshot(args.category, data, store_root)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif args.command == "load":
@@ -372,7 +392,7 @@ def main():
             print(json.dumps({"error": "未找到历史快照"}, ensure_ascii=False))
             sys.exit(1)
     elif args.command == "diff":
-        data = json.loads(args.data)
+        data = _parse_data(args.data)
         result = diff_snapshot(args.category, data, store_root, save=not args.no_save)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         print()  # 空行分隔

@@ -1,6 +1,6 @@
 # ecommerce-product-investigator 使用说明书
 
-> **技能版本**：v0.5.3（2026-11-05更新）  
+> **技能版本**：v0.5.4（2026-11-05更新）  
 > **技能类型**：AI 驱动的电商商品调研与选品分析工具  
 > **支持模式**：国内电商模式 + 跨境电商模式  
 > **项目地址**：https://github.com/Saber-doudou/ecommerce-product-investigator
@@ -16,7 +16,7 @@
 | **国内电商模式** | 消费者 | 全网比价、参数对比、评价分析、AI购买建议 |
 | **跨境电商模式** | 卖家 | 选品分析、竞品调研、利润测算、市场风险评估 |
 
-**当前版本**：v0.5.3（2026-11-05更新）  
+**当前版本**：v0.5.4（2026-11-05更新）  
 **支持平台**：京东、淘宝、拼多多、闲鱼、1688、Amazon、Shopee、TikTok Shop、Temu
 
 ---
@@ -27,14 +27,14 @@
 
 ```bash
 # 安装依赖
-pip install -r "${CODEBUDDY_SKILL_DIR}/scripts/requirements.txt"
+cd <技能根目录> && pip install -r ./scripts/requirements.txt
 
 # 配置环境变量（跨境模式需要）
 export MAISHOU_API_KEY="your_api_key"
 export MAISHOU_OPENID="your_open_id"
 ```
 
-> **API Key 获取方式**：登录买手平台 → 开发者中心 → 创建应用获取。凭据入口 `www.maishou88.com` 2026-11-05 实测证书过期，获取前先按 `SKILL.md`「事实校验锚」复核
+> **API Key 获取方式**：登录买手平台获取邀请码与 OpenID（脚本以 inviteCode 提交，不是开发者中心创建的 API Key）。凭据入口 `www.maishou88.com` 2026-11-05 实测证书过期，获取前先按 `SKILL.md`「事实校验锚」复核
 
 ### 2. 技能安装
 
@@ -103,8 +103,8 @@ Step 3: 输出快速摘要（市场容量、竞争程度、入场难度）
 
 **采集优先级**：
 1. **API 数据**（最快最稳）→ `scripts/maishou_price.py` 获取价格参考
-2. **CDP 浏览器自动化**（数据最全）→ 需要本地浏览器支持
-3. **Web Search**（通用兜底）→ 始终可用，但信息可能不够结构化
+2. **Web Search**（通用兜底）→ 始终可用，但信息可能不够结构化
+3. **CDP 浏览器自动化**（境外站实验性，默认不启用）→ 仅在 Web Search 不足时手动启用
 
 **采集维度**：
 - 竞品价格分布（最低/中位数/最高）
@@ -257,7 +257,7 @@ FBA费：$5.5（标准尺寸小件）
 
 1. **CDP 访问境外网站**：目前尚未验证是否能正常访问 Amazon、Shopee 等，如无法访问会自动降级到 Web Search
 2. **数据精度标注**：我会用 🟢高/🟡中/🟠低/🔴手动 标注数据可靠性
-3. **版本更新**：当前 v0.5.3，使用前请核对 SKILL.md frontmatter 的 version
+3. **版本更新**：当前 v0.5.4，使用前请核对 SKILL.md frontmatter 的 version
 
 ---
 
@@ -269,7 +269,7 @@ FBA费：$5.5（标准尺寸小件）
 | `references/crossborder-guide.md` | 跨境4阶段引擎、单点查询、监测模式详解 | 跨境模式深度调研时查阅 |
 | `references/platform-guide.md` | 跨境平台差异速查（佣金/物流/Review/BSR规则） | 跨境模式报告输出前查阅 |
 | `references/output-template.md` | 4种场景的输出模板 | 输出报告时参照格式 |
-| `references/fallback-guide.md` | 降级链（API→CDP→Web Search→手动）+ 精度标注体系 | 数据采集出错时查阅 |
+| `references/fallback-guide.md` | 降级链（API→Web Search→CDP 实验性默认不启用→手动）+ 精度标注体系 | 数据采集出错时查阅 |
 | `references/cdp-setup.md` | CDP浏览器自动化配置指南 | 需要连接本地浏览器时查阅 |
 | `references/api-limits.md` | API 限流规则与状态码处理 | 调用频率受限时查阅 |
 | `references/commission-rates.yaml` | 佣金率 / 税率唯一事实源 | 更新费率或核对扣点时查阅 |
@@ -286,7 +286,7 @@ FBA费：$5.5（标准尺寸小件）
 
 ### 我会自动：
 1. 选择合适的工作模式
-2. 按优先级采集数据（API → CDP → Web Search）
+2. 按优先级采集数据（API → Web Search → CDP 实验性默认不启用）
 3. 进行深度分析并生成报告
 4. 确保每个判断都有数据支撑
 
@@ -301,4 +301,4 @@ FBA费：$5.5（标准尺寸小件）
 ---
 
 *文档生成时间：2026-05-25；版本标注校订：2026-11-05*  
-*基于版本：ecommerce-product-investigator v0.5.3*
+*基于版本：ecommerce-product-investigator v0.5.4*

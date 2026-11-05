@@ -33,7 +33,7 @@ class TestCalcDomestic:
 
     def test_zero_selling_price(self):
         r = calc_domestic(purchase_price=80, selling_price=0)
-        assert r["利润率"] == "0.0%"
+        assert r["利润率"] == "不适用（售价为 0）"
         assert r["利润"] == -80.0
 
     def test_negative_profit(self):
@@ -239,3 +239,46 @@ class TestCommissionRatesGuard:
         with pytest.raises(ValueError, match="未知市场"):
             calc_crossborder(purchase_price_cny=80, exchange_rate=7.2,
                              selling_price_usd=29.99, market="XX")
+
+class TestRateBoundaries:
+    """审查收口：佣金率边界、无法保本、费率来源、JSON 合法性"""
+
+    def test_negative_commission_raises(self):
+        with pytest.raises(ValueError, match="佣金率必须"):
+            calc_domestic(purchase_price=80, selling_price=159, commission_rate=-0.05)
+
+    def test_commission_above_one_raises(self):
+        with pytest.raises(ValueError, match="佣金率必须"):
+            calc_domestic(purchase_price=80, selling_price=159, commission_rate=1.5)
+
+    def test_full_commission_break_even_is_none(self):
+        r = calc_domestic(purchase_price=80, selling_price=159, commission_rate=1.0)
+        assert r["保本售价"] is None
+        assert "保本售价" not in r["敏感度分析"]
+
+    def test_zero_selling_price_rate_label(self):
+        r = calc_domestic(purchase_price=80, selling_price=0)
+        assert r["利润率"] == "不适用（售价为 0）"
+
+    def test_crossborder_unreachable_break_even_json_is_valid(self):
+        import json
+        from profit_calc import format_output
+        r = calc_crossborder(purchase_price_cny=80, exchange_rate=7.2,
+                             selling_price_usd=29.99, commission_rate=0.8, tax_rate=0.25)
+        assert r["保本售价"] is None
+        out = format_output(r, fmt="json")
+        assert "Infinity" not in out and "NaN" not in out
+        assert json.loads(out)["保本售价"] is None
+
+    def test_rate_source_default_is_marked(self):
+        r = calc_domestic(purchase_price=80, selling_price=159)
+        assert "默认假设" in r["费率来源"]
+
+    def test_rate_source_platform_is_marked(self):
+        r = calc_domestic(purchase_price=80, selling_price=159, platform="jd")
+        assert "平台 jd" in r["费率来源"]
+
+    def test_staleness_six_months_boundary_warns(self):
+        warnings = check_commission_staleness(today=datetime(2026, 11, 1))
+        assert len(warnings) == 1
+        assert "6 个月" in warnings[0]

@@ -13,7 +13,7 @@ maishou_price.py - 跨境选品采购价查询脚本
 参数说明:
     keyword   : 搜索关键词
     --source  : 平台选择 (0=综合 1=淘宝 2=京东 3=拼多多 10=1688)
-    --limit   : 返回结果数量 (默认 10)
+    --limit   : 每个平台返回的结果数量 (默认 10)
     --page    : 分页页码 (默认 1)
     --format   : 输出格式 (table/json/csv, 默认 table)
     --output   : 输出文件路径 (可选，不指定则输出到终端)
@@ -30,8 +30,7 @@ import argparse
 logger = logging.getLogger(__name__)
 
 from maishou_common import (
-    SEARCH_URL, SOURCE_MAP, TIMEOUT,
-    get_openid, get_headers_app,
+    SOURCE_MAP,
     get_session, close_session, check_env, format_table,
     search_api,
 )
@@ -51,12 +50,12 @@ async def search_single_source(
 
     return [
         {
-            "title": item.get("title", ""),
+            "title": item.get("title") or "",
             "price": item.get("actualPrice") or item.get("originalPrice") or "",
             "platform": SOURCE_MAP.get(src, f"平台{src}"),
             "url": "",  # API 不直接返回购买链接，需通过 detail 接口获取
-            "sales": item.get("monthSales", ""),
-            "shop": item.get("shopName", ""),
+            "sales": item.get("monthSales") or "",
+            "shop": item.get("shopName") or "",
         }
         for item in items[:limit]
     ]
@@ -103,7 +102,7 @@ def format_csv(results: list[dict], output: io.StringIO | None = None) -> str:
         return "未找到结果"
 
     buf = output or io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=["title", "price", "platform", "shop", "sales", "url"])
+    writer = csv.DictWriter(buf, fieldnames=["title", "price", "platform", "shop", "sales", "url"], lineterminator="\n")
     writer.writeheader()
     for r in results:
         writer.writerow(r)
@@ -119,7 +118,7 @@ async def main():
         parser = argparse.ArgumentParser(description="跨境选品采购价查询")
         parser.add_argument("keyword", help="搜索关键词")
         parser.add_argument("--source", type=int, default=0, help="平台 (0=综合 1=淘宝 2=京东 3=拼多多 10=1688)")
-        parser.add_argument("--limit", type=int, default=10, help="返回结果数量")
+        parser.add_argument("--limit", type=int, default=10, help="每个平台返回的结果数量（--source 0 时为每平台上限）")
         parser.add_argument("--page", type=int, default=1, help="分页页码")
         parser.add_argument("--format", choices=["table", "json", "csv"], default="table", help="输出格式")
         parser.add_argument("--output", help="输出文件路径 (可选)")
@@ -133,10 +132,10 @@ async def main():
         def _fmt_table(res):
             if not res:
                 return "未找到结果"
-            title_width = max(20, max(display_width(r["title"]) for r in res))
+            title_width = max(20, max(display_width(r.get("title") or "") for r in res))
             columns = {"序号": 4, "商品名": title_width, "价格": 10, "平台": 8, "销量": 10}
             display_rows = [
-                {"序号": i, "商品名": r["title"], "价格": r["price"], "平台": r["platform"], "销量": str(r.get("sales", ""))}
+                {"序号": i, "商品名": r.get("title") or "", "价格": r["price"], "平台": r["platform"], "销量": str(r.get("sales", ""))}
                 for i, r in enumerate(res, 1)
             ]
             return format_table(display_rows, columns)

@@ -56,10 +56,14 @@ class TestCheckEnv:
         result = check_env()
         assert isinstance(result, list)
 
-    def test_warning_text_format(self):
-        """警告文本应包含 ⚠️ 前缀"""
+    def test_warning_text_format(self, monkeypatch):
+        """缺环境变量时必须真的产生警告（原用例空列表时循环不执行，属假通过）"""
+        monkeypatch.delenv("MAISHOU_API_KEY", raising=False)
+        monkeypatch.delenv("MAISHOU_OPENID", raising=False)
         result = check_env()
+        assert result, "缺凭据时必须返回警告列表"
         for w in result:
+            assert w.startswith("⚠️ ")
             assert w.startswith("⚠️ ")
 
 

@@ -24,7 +24,7 @@ def _load_dotenv():
     env_path = Path(__file__).parent.parent / ".env"
     if not env_path.exists():
         return
-    with open(env_path, encoding="utf-8") as f:
+    with open(env_path, encoding="utf-8-sig") as f:
         for lineno, line in enumerate(f, 1):
             line = line.strip()
             # 跳过注释和空行
@@ -38,7 +38,13 @@ def _load_dotenv():
                 continue
             key, _, value = line.partition("=")
             key = key.strip()
-            value = value.strip().strip('"').strip("'")
+            value = value.strip()
+            if value[:1] in ('"', "'"):
+                quote = value[0]
+                end = value.find(quote, 1)
+                value = value[1:end] if end > 0 else value[1:]
+            else:
+                value = value.split("#", 1)[0].strip()
             if key and value:
                 os.environ.setdefault(key, value)
 
