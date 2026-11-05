@@ -152,7 +152,8 @@ def format_table(rows: list[dict], columns: dict[str, int]) -> str:
     for r in rows:
         parts = []
         for col, width in columns.items():
-            val = str(r.get(col, ""))
+            value = r.get(col, "")
+            val = "" if value is None else str(value)
             parts.append(_pad_str(val, width))
         lines.append("  ".join(parts))
 

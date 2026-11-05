@@ -63,7 +63,6 @@ class TestCheckEnv:
         assert result, "缺凭据时必须返回警告列表"
         for w in result:
             assert w.startswith("⚠️ ")
-            assert w.startswith("⚠️ ")
 
 
 class TestSessionConcurrency:

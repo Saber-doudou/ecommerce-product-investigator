@@ -1,6 +1,6 @@
 # ecommerce-product-investigator 使用说明书
 
-> **技能版本**：v0.5.5（2026-11-05更新）  
+> **技能版本**：v0.5.6（2026-11-06更新）  
 > **技能类型**：AI 驱动的电商商品调研与选品分析工具  
 > **支持模式**：国内电商模式 + 跨境电商模式  
 > **项目地址**：https://github.com/Saber-doudou/ecommerce-product-investigator
@@ -16,7 +16,7 @@
 | **国内电商模式** | 消费者 | 全网比价、参数对比、评价分析、AI购买建议 |
 | **跨境电商模式** | 卖家 | 选品分析、竞品调研、利润测算、市场风险评估 |
 
-**当前版本**：v0.5.5（2026-11-05更新）  
+**当前版本**：v0.5.6（2026-11-06更新）  
 **支持平台**：京东、淘宝、拼多多、闲鱼、1688、Amazon、Shopee、TikTok Shop、Temu
 
 ---
@@ -29,7 +29,7 @@
 # 安装依赖
 cd <技能根目录> && pip install -r ./scripts/requirements.txt
 
-# 配置环境变量（跨境模式需要）
+# 配置环境变量（国内比价与跨境采购均需要）
 export MAISHOU_API_KEY="your_api_key"
 export MAISHOU_OPENID="your_open_id"
 ```
@@ -246,7 +246,7 @@ FBA费：$5.5（标准尺寸小件）
 
 我的流程：
 1. Stage 1：确认目标市场 US、平台 Amazon、预算 $5000
-2. Stage 2：CDP 抓取 TOP20 竞品详情 + API 价格 + Search 补充市场报告
+2. Stage 2：API 价格 + Web Search 采集 TOP20 竞品详情与市场报告；CDP 仅在必要时启用（境外站实验性，默认不启用）
 3. Stage 3：市场吸引力中等、头部集中度高但有差异化空间（定制IP）、FBA 利润率（按实际采集数据测算）
 4. Stage 4：输出报告 → 建议可做但需差异化定位，避开通用款红海
 ```
@@ -257,7 +257,7 @@ FBA费：$5.5（标准尺寸小件）
 
 1. **CDP 访问境外网站**：目前尚未验证是否能正常访问 Amazon、Shopee 等，如无法访问会自动降级到 Web Search
 2. **数据精度标注**：我会用 🟢高/🟡中/🟠低/🔴手动 标注数据可靠性
-3. **版本更新**：当前 v0.5.5，使用前请核对 SKILL.md frontmatter 的 version
+3. **版本更新**：当前 v0.5.6，使用前请核对 SKILL.md frontmatter 的 version
 
 ---
 
@@ -301,4 +301,4 @@ FBA费：$5.5（标准尺寸小件）
 ---
 
 *文档生成时间：2026-05-25；版本标注校订：2026-11-05*  
-*基于版本：ecommerce-product-investigator v0.5.5*
+*基于版本：ecommerce-product-investigator v0.5.6*

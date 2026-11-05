@@ -135,7 +135,7 @@ async def main():
             title_width = max(20, max(display_width(r.get("title") or "") for r in res))
             columns = {"序号": 4, "商品名": title_width, "价格": 10, "平台": 8, "销量": 10}
             display_rows = [
-                {"序号": i, "商品名": r.get("title") or "", "价格": r["price"], "平台": r["platform"], "销量": str(r.get("sales", ""))}
+                {"序号": i, "商品名": r.get("title") or "", "价格": r["price"], "平台": r["platform"], "销量": r.get("sales") or ""}
                 for i, r in enumerate(res, 1)
             ]
             return format_table(display_rows, columns)

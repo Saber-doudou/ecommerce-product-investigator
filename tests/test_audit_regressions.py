@@ -64,6 +64,9 @@ def test_sanitize_category_blocks_traversal(tmp_path):
     from monitor_store import _sanitize_category, save_snapshot
     assert _sanitize_category("..") == "unnamed"
     assert _sanitize_category("a/b") == "a_b"
+    assert _sanitize_category("con") == "con_dir"
+    assert _sanitize_category("COM1") == "COM1_dir"
+    assert _sanitize_category("nul") == "nul_dir"
     result = save_snapshot("..", {"prices": [10]}, tmp_path)
     path = Path(result["path"]).resolve()
     assert tmp_path.resolve() in path.parents
@@ -90,7 +93,7 @@ async def test_search_empty_json_has_fixed_shape(monkeypatch):
     monkeypatch.setattr(ms, "get_session", fake_session)
     monkeypatch.setattr(ms, "search_api", fake_search_api)
     out = await ms.search_products("x", format="json")
-    assert set(json.loads(out)) == {"items", "error"}
+    assert json.loads(out) == []  # --format json 恒为数组，空结果/错误一致；错误原因走日志
 
 
 @pytest.mark.asyncio

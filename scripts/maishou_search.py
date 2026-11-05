@@ -51,12 +51,17 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
     )
 
     if error:
-        fmt = kwargs.get("format", "csv")
-        return json.dumps({"items": [], "error": error}, ensure_ascii=False) if fmt == "json" else f"❌ {error}"
+        if kwargs.get("format") == "json":
+            logger.warning("查询失败: %s（JSON 输出恒为数组，错误原因走日志）", error)
+            return "[]"
+        return f"❌ {error}"
 
     if not items:
         msg = "查询结果为空"
-        return json.dumps({"items": [], "error": msg}, ensure_ascii=False) if kwargs.get("format") == "json" else f"❌ {msg}"
+        if kwargs.get("format") == "json":
+            logger.info("查询结果为空（JSON 输出恒为数组）")
+            return "[]"
+        return f"❌ {msg}"
 
     rows = [
         {
@@ -90,7 +95,7 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
                 "#": r["idx"],
                 "商品名": r.get("title") or "",
                 "价格": str(r.get("actualPrice") or r.get("originalPrice") or "?"),
-                "销量": str(r.get("monthSales", "")),
+                "销量": r.get("monthSales") or "",
                 "店铺": (r.get("shopName") or ""),
             })
         return format_table(display_rows, columns)

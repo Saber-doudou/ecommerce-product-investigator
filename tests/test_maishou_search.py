@@ -150,7 +150,11 @@ class TestSearchProducts:
             with patch("maishou_search.search_api", new=AsyncMock()) as mock_api:
                 mock_api.return_value = ([], None)
                 result = await search_products("不存在", format="json")
-                assert "error" in result
+                assert __import__("json").loads(result) == []
+
+                mock_api.return_value = ([], "网络超时")
+                result = await search_products("蓝牙", format="json")
+                assert __import__("json").loads(result) == []
 
     @pytest.mark.asyncio
     async def test_api_error(self):

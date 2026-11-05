@@ -37,12 +37,17 @@ logger = logging.getLogger(__name__)
 DEFAULT_STORE_DIR = Path.home() / ".ecom-investigator" / "monitor"
 
 
+_WINDOWS_RESERVED = {"con", "prn", "aux", "nul"} | {
+    f"{prefix}{i}" for prefix in ("com", "lpt") for i in range(1, 10)
+}
+
+
 def _sanitize_category(category: str) -> str:
-    """将品类名转为安全的目录名"""
+    """将品类名转为安全的目录名（含 Windows 保留名防护）"""
     # 白名单：字母/数字/中文/下划线/连字符，其余替换；拒绝 . 与 .. 防路径穿越
     safe = "".join(ch if (ch.isalnum() or ch in "-_") else "_" for ch in (category or "").strip())
-    safe = safe.strip("._")
-    return safe or "unnamed"
+    safe = safe.strip("._") or "unnamed"
+    return f"{safe}_dir" if safe.lower() in _WINDOWS_RESERVED else safe
 
 
 def _store_dir(store_root: Path, category: str) -> Path:

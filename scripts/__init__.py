@@ -6,7 +6,7 @@ from pathlib import Path
 _logger = logging.getLogger(__name__)
 _version_file = Path(__file__).parent.parent / "SKILL.md"
 if _version_file.exists():
-    _match = re.search(r"^version://s*(.+)$", _version_file.read_text(encoding="utf-8"), re.MULTILINE)
+    _match = re.search(r"^version:\s*(.+)$", _version_file.read_text(encoding="utf-8"), re.MULTILINE)
     if _match:
         __version__ = _match.group(1).strip()
     else:

@@ -130,8 +130,9 @@ curl -s http://localhost:9222/json/version | head -5
 |:---:|:---|
 | PORT_IN_USE（9222被占用 + 返回JSON） | ✅ 直接复用，跳过启动步骤 |
 | PORT_IN_USE（9222被非浏览器占用） | 尝试备选端口（9223/9224） |
-> 切换端口后，本文档后续所有 `agent-browser --cdp 9222` 命令须同步替换为新端口。
 | PORT_FREE（9222空闲） | 继续启动浏览器流程 |
+
+> 切换端口后，本文档后续所有 `agent-browser --cdp 9222` 命令须同步替换为新端口。
 
 ### 备选端口
 
