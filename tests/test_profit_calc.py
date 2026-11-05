@@ -1,6 +1,7 @@
 """profit_calc.py 单元测试 — 国内/跨境利润计算、敏感度分析、边界值"""
 
 import pytest
+from datetime import datetime
 from profit_calc import (
     calc_domestic, calc_crossborder,
     check_commission_staleness,
@@ -200,12 +201,41 @@ class TestEdgeCases:
 
 
 class TestCommissionStaleness:
-    """check_commission_staleness() — 佣金率过期检测"""
+    """check_commission_staleness() — 佣金率过期检测（注入固定日期，避免时间炸弹）"""
 
     def test_not_stale_when_recent(self):
-        # COMMISSION_REF_DATE = "2026-05"，当前 2026-05 不应过期
-        warnings = check_commission_staleness()
+        warnings = check_commission_staleness(today=datetime(2026, 5, 1))
         assert len(warnings) == 0
 
     def test_returns_list(self):
         assert isinstance(check_commission_staleness(), list)
+
+    def test_stale_after_threshold(self):
+        warnings = check_commission_staleness(today=datetime(2027, 5, 1))
+        assert len(warnings) == 1
+        assert "已过 12 个月" in warnings[0]
+
+
+class TestCommissionRatesGuard:
+    """v0.5.3：费率数据不可用或入参越界时必须显式报错，禁止静默降级"""
+
+    def test_missing_rates_file_raises(self, monkeypatch, tmp_path):
+        import profit_calc
+        monkeypatch.setattr(profit_calc, "__file__", str(tmp_path / "fake.py"))
+        with pytest.raises(profit_calc.CommissionRatesError, match="费率文件不存在"):
+            profit_calc._load_commission_rates()
+
+    def test_rates_error_stops_calculation(self, monkeypatch):
+        import profit_calc
+        monkeypatch.setattr(profit_calc, "_RATES_ERROR", "模拟费率不可用")
+        with pytest.raises(profit_calc.CommissionRatesError, match="禁止在无费率数据"):
+            profit_calc.calc_domestic(80, 159, commission_rate=0.05)
+
+    def test_unknown_domestic_platform_raises(self):
+        with pytest.raises(ValueError, match="未知平台"):
+            calc_domestic(purchase_price=80, selling_price=159, platform="unknown")
+
+    def test_unknown_crossborder_market_raises(self):
+        with pytest.raises(ValueError, match="未知市场"):
+            calc_crossborder(purchase_price_cny=80, exchange_rate=7.2,
+                             selling_price_usd=29.99, market="XX")

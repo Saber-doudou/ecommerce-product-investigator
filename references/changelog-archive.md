@@ -60,7 +60,7 @@
 - **print→logging**：全部脚本警告统一走 logging 模块
 - **maishou_search.py --output**：搜索结果支持文件输出
 - **佣金率过期提醒**：COMMISSION_REF_DATE 超 6 个月自动 warn
-- **SKILL.md frontmatter**：description 精简（~200→~100 字符）
+- **SKILL.md frontmatter**：description 精简（约 200 字符精简至约 100 字符）
 
 ---
 

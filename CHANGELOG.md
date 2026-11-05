@@ -5,6 +5,19 @@
 
 ---
 
+## [0.5.3] — 2026-11-05
+
+### 修复（P0：文档与实现不一致）
+- **移除硬编码费率副本**：`scripts/profit_calc.py` 删除 `_DEFAULT_*` 四组内存费率表，费率唯一事实源为 `references/commission-rates.yaml`。文件缺失 / PyYAML 缺失 / 解析失败 / 数据不完整均抛 `CommissionRatesError`，CLI 显式报错并以退出码 2 停止，不再静默降级输出利润
+- **未知平台 / 未知市场不再套默认值**：`calc_domestic()` / `calc_crossborder()` 遇未知键抛 `ValueError` 并列出可用值
+- **费率过期检测可注入日期**：`check_commission_staleness(today=...)`，消除测试随日历推移失效的时间炸弹
+- **命令路径补齐**：安装依赖命令中的残留相对路径改用 `${CODEBUDDY_SKILL_DIR}`
+- **文档自洽**：环境变量表不再指向已失效的凭据入口；README 删「代码自动 fallback」过期描述；合规边界收进 `SKILL.md` 单点；docs 说明书修乱码 / 编号跳号 / 过期参数 / 示意数字标注 / 范围符；待优化项 OPT-1 标记已实现
+- **安装副本同步**至 0.5.3，与仓库零分叉（含 `docs/` 与 `.gitignore`）
+
+### 测试
+- 测试数 125 至 **130 passed**（新增 5 个守卫用例：费率文件缺失、费率错误阻断计算、未知平台、未知市场、过期阈值）
+
 ## [0.5.2] — 2026-11-05
 
 ### 文档与可用性（不改变任何业务规则）
@@ -38,7 +51,7 @@
 
 ### 修复（P1）
 - **Session 锁初始化提前**：`_SESSION_LOCK` 改为模块加载时初始化为 `asyncio.Lock()`，消除 `close_session()` 无锁保护竞态窗口
-- **佣金率数据外部化**：新增 `references/commission-rates.yaml`，非开发者可直接修改 YAML 文件更新佣金率。代码自动 fallback 到硬编码默认值
+- **佣金率数据外部化**：新增 `references/commission-rates.yaml`，非开发者可直接修改 YAML 文件更新佣金率。代码自动 fallback 到硬编码默认值（v0.5.3 起已移除该回退，见 0.5.3 条目）
 - **快速模式编号式升级提示**：快速模式输出末尾追加 1️⃣2️⃣3️⃣4️⃣ 编号选项，Agent 识别编号即可路由升级
 - **监测模式数据持久化**：新增 `scripts/monitor_store.py`，支持按品类+日期保存快照、增量对比、自动标注变化。存储路径 `~/.ecom-investigator/monitor/`
 
@@ -160,7 +173,7 @@
 
 | # | 建议 | 优先级 | 状态 |
 |---|------|--------|------|
-| OPT-1 | 配置文件支持：佣金率、默认市场等可配置化（JSON/YAML） | P1 | ⬜ 待实现 |
+| OPT-1 | 配置文件支持：佣金率、默认市场等可配置化（JSON/YAML） | P1 | ✅ 已实现（v0.5.0，见 `references/commission-rates.yaml`） |
 | OPT-2 | 类型注解完善：补充函数参数和返回值类型注解 | P2 | ⬜ 待实现 |
 | OPT-3 | 错误处理标准化：统一错误码体系（ErrorCode enum） | P2 | ⬜ 待实现 |
 

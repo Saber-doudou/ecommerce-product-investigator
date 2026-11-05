@@ -38,7 +38,7 @@
 1. **并发控制**：`maishou_price.py` 综合搜索使用 `asyncio.gather` 多平台并发，平台数上限由 `sources` 列表控制（当前 5 个平台）
 2. **失败降级**：买手 API 失败不阻塞流程，降级到 CDP 或 Web Search
 3. **请求间隔**：连续多次调用同一接口时，建议间隔 ≥ 1 秒
-4. **环境变量**：确保 `MAISHOU_API_KEY` 和 `MAISHOU_OPENID` 正确设置——未授权请求也可能返回异常状态码
+4. **环境变量**：确保 `MAISHOU_API_KEY` 和 `MAISHOU_OPENID` 正确设置，未授权请求也可能返回异常状态码
 
 ## 待补充
 

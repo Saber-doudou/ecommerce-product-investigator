@@ -1,6 +1,6 @@
 ---
 name: ecommerce-product-investigator
-version: 0.5.2
+version: 0.5.3
 description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。Use when the user asks 这个商品值不值得做 / 选品调研 / 竞品分析 / 帮我比比价 / 算一下利润, or pastes a product URL or ASIN, or needs 国内与跨境 automatic routing by platform domain. 触发词 选品、竞品调研、比价、利润测算、ASIN、BSR。
 agent_created: true
 compatibility: Requires Python 3.11+ with aiohttp and PyYAML; network access to appapi.maishou88.com; agent-browser CLI with CDP port 9222 for deep research.
@@ -235,16 +235,26 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-pr
 4. **缺失字段标注"未检索到"** — 绝不猜测填充，每个字段标注数据来源和精度
 5. **跨境利润计算** — 佣金和税金基于售价，使用前务必确认公式正确性
 
+### 合规边界（Agent 必读）
+
+红线以本节为准；README 与 docs 的合规章节是人类版说明，不是第二份规则源。
+
+**允许**：采集公开可见的商品名 / 价格 / 参数 / 评价 / BSR；通过官方 API 获取授权范围内数据；分析自己店铺数据；控制频率并遵守 robots.txt。
+
+**禁止**：绕过验证码或登录墙抓取非公开数据；高频批量爬取导致平台服务器压力；抓取其他商家后台运营数据；转售采集数据或未授权营销。
+
+用户索取上述禁止项时**直接拒绝并说明原因**，不提供替代实现、不编造数据。
+
 ---
 
 ## 环境变量
 
-> 💡 首次使用前需安装依赖：`pip install -r scripts/requirements.txt`
+> 💡 首次使用前需安装依赖：`pip install -r "${CODEBUDDY_SKILL_DIR}/scripts/requirements.txt"`
 
 | 变量名 | 必要性 | 说明 |
 |:---|:---|:---|
-| `MAISHOU_API_KEY` | 必须 | 买手 88 API 邀请码，从 maishou88.com 获取 |
-| `MAISHOU_OPENID` | 必须 | 买手 88 用户 OpenID，从 maishou88.com 获取 |
+| `MAISHOU_API_KEY` | 必须 | 买手 88 **邀请码**（脚本以 `inviteCode` 提交，非 API Key）；凭据入口 `www.maishou88.com` 2026-11-05 实测证书过期，获取前按「事实校验锚」复核 |
+| `MAISHOU_OPENID` | 必须 | 买手 88 用户 OpenID（对应脚本 `openid`）；入口可用性同见「事实校验锚」 |
 
 > 💡 设置方式：`export MAISHOU_API_KEY="your_key"` 或写入 `.env` 文件。可参考 `.env.example` 模板。
 
@@ -252,7 +262,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-pr
 
 将 skill 目录放到 `.workbuddy/skills/` 后，WorkBuddy 通过文件系统直接加载 SKILL.md 生效。
 
-> 💡 部分 WorkBuddy 版本可能需要额外执行 `ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator`。如该命令不存在，可跳过——文件系统加载已足够。
+> 💡 部分 WorkBuddy 版本可能需要额外执行 `ima_skill_create -d /path/to/.workbuddy/skills/ecommerce-product-investigator`。如该命令不存在，可跳过，文件系统加载已足够。
 
 ### 事实校验锚
 
@@ -261,16 +271,16 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-pr
 | 事实 | 核实状态 | 校验方法（可复制） |
 |:---|:---|:---|
 | 买手 API 端点 `appapi.maishou88.com` | 2026-11-05 实测 `HTTP 200`，端点存活 | `curl -sS -o /dev/null -w "%{http_code}" --max-time 10 https://appapi.maishou88.com/` |
-| 凭据入口 `www.maishou88.com` | 2026-11-05 实测 TLS `SEC_E_CERT_EXPIRED`，**当前不可用** | `curl -I https://www.maishou88.com/` 看证书报错；`.env.example` 与环境变量表仍写「从 maishou88.com 获取」，引用前须复核 |
+| 凭据入口 `www.maishou88.com` | 2026-11-05 实测 TLS `SEC_E_CERT_EXPIRED`，**当前不可用** | `curl -I https://www.maishou88.com/` 看证书报错；`.env.example` 仍写「从 maishou88.com 获取」（已随版本加警示）；环境变量表已标注失效并指向本节，引用前须复核 |
 | `MAISHOU_API_KEY` 语义 | 实为**邀请码**，脚本以 `inviteCode` 提交，非 API Key；`MAISHOU_OPENID` 对应 `openid`（2026-11-05 读码核实） | `grep -n "inviteCode\|get_invite_code\|openid" "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py"` |
 | 端点路径版本 | 搜索 `/api/v1/homepage/searchList`、详情 `/api/v3/goods/detail`、转链 `/api/v1/share/getTargetUrl`，均定义在 `scripts/maishou_common.py`（2026-11-05 读码核实） | `grep -n "SEARCH_URL\|DETAIL_URL\|TARGET_URL" "${CODEBUDDY_SKILL_DIR}/scripts/maishou_common.py"` |
-| 平台佣金率 / 扣点率 | 存于 `references/commission-rates.yaml`，**经验值，非官方 SLA** | `python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" domestic --help`，输出不得出现「加载失败」；变更直接改 YAML |
+| 平台佣金率 / 扣点率 | 存于 `references/commission-rates.yaml`，**经验值，非官方 SLA** | `python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" domestic --help`，费率加载失败时须以非零码退出并明确报错（v0.5.3 起）；变更直接改 YAML |
 | 限流经验值 | `references/api-limits.md` 自述「经验数据，非官方 SLA」；官方限流文档检索无果 | 读该文件「最后校验」行，不把经验值当承诺 |
 | 「✅ 已验证」「买手价 × 0.8」「京东异步渲染」 | 分别记于 2026-05-29 与 2026-11-04，**本轮未逐条重测** | 端点按上表重跑；×0.8 是估算系数，须对照实际采购报价；Route B/D 须实跑一次 CDP 采集确认 |
 
 **解释器自检与失败处置**：执行任何 `scripts/` 命令前先跑 `python -c "import importlib.util as u; print(u.find_spec('aiohttp'), u.find_spec('yaml'))"`，两项均非 `None` 才算可用。缺依赖、费率文件加载失败或凭据缺失时**必须显式报错并停止，禁止静默降级到硬编码费率，禁止把缺失数据写成 0**。
 
-> 已知残留：`scripts/profit_calc.py` 目前仍会在费率文件加载失败时**仅打 warning、回退硬编码费率并正常退出 0**（实测于 2026-11-05，缺 `yaml` 的解释器下可复现）。上面是文档侧约定，代码侧修复待单独授权，本轮未改。用系统 Python 3.13 执行可避免该情形，但仍不能把退回避作「已校验」。
+> **v0.5.3 已闭环**：`scripts/profit_calc.py` 已移除全部硬编码费率副本，加载失败抛 `CommissionRatesError`、CLI 以退出码 2 停止。上面「必须显式报错并停止」已是代码实际行为，本条不再是残留。
 
 ---
 
@@ -284,7 +294,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/profit_calc.py" crossborder --purchase-pr
 
 ### `scripts/maishou_search.py`（国内比价）
 
-基于买手 88 API（`appapi.maishou88.com` ✅ 已验证）。
+基于买手 88 API（`appapi.maishou88.com`，2026-11-05 实测 HTTP 200；核法见「事实校验锚」）。
 
 ```bash
 python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_search.py" search --source=0 --keyword='<商品名>'

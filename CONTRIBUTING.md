@@ -8,6 +8,8 @@
 
 ```bash
 # 克隆仓库
+> 以下命令均在克隆后的**仓库根目录**执行，与技能运行时的 `${CODEBUDDY_SKILL_DIR}` 无关。
+
 git clone https://github.com/Saber-doudou/ecommerce-product-investigator.git
 cd ecommerce-product-investigator
 
@@ -17,7 +19,7 @@ source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate   # Windows
 
 # 安装依赖
-pip install -r scripts/requirements.txt
+pip install -r ./scripts/requirements.txt
 pip install -r requirements-dev.txt
 ```
 
@@ -76,7 +78,7 @@ docs(crossborder-guide): 补充 JP/UK 市场利润对比
 ## Pull Request 流程
 
 1. Fork 本仓库
-2. 从 `master` 创建特性分支：`git checkout -b feat/my-feature`
+2. 从 `main` 创建特性分支：`git checkout -b feat/my-feature`
 3. 提交更改并确保测试通过
 4. 推送到你的 Fork：`git push origin feat/my-feature`
 5. 创建 Pull Request，填写说明

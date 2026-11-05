@@ -29,79 +29,77 @@ logger = logging.getLogger(__name__)
 from text_utils import display_width, pad_str as _pad_str_local
 
 
-# ── 佣金率加载（YAML 文件 → fallback 硬编码） ──
-
-# 硬编码默认值（当 YAML 文件不存在或格式错误时使用）
-_DEFAULT_DOMESTIC_COMMISSION = {
-    "jd": 0.05,      # 京东 POP 约 3-8%
-    "tmall": 0.05,   # 天猫约 2-5%
-    "taobao": 0.00,  # 淘宝基础无佣金
-    "pdd": 0.006,    # 拼多多 0.6% 支付手续费
-    "1688": 0.03,    # 1688 约 2-5%
-}
-_DEFAULT_CROSSBORDER_COMMISSION = {
-    "amazon": 0.15,
-    "shopee": 0.06,   # 5% + 1% payment fee
-    "tiktok": 0.06,   # 5% + 1% payment fee
-    "temu": 0.05,     # 补贴期
-}
-_DEFAULT_MARKET_TAX = {"US": 0.0, "DE": 0.19, "JP": 0.10, "UK": 0.20}
-_DEFAULT_REF_DATE = "2026-05"
+# ── 佣金率加载（唯一事实源：references/commission-rates.yaml） ──
+#
+# v0.5.3 起移除全部硬编码费率副本。加载失败一律抛 CommissionRatesError，
+# CLI 显式报错并以非零码退出，禁止静默降级。
 
 _COMMISSION_STALENESS_MONTHS = 6
 
+# 用户既未指定 --commission-rate 也未指定 --platform 时的业务默认假设。
+# 这不是平台费率副本；各平台费率一律从 YAML 读取。
+_UNSPECIFIED_DOMESTIC_RATE = 0.05
+_UNSPECIFIED_CROSSBORDER_RATE = 0.15
+
+
+class CommissionRatesError(RuntimeError):
+    """费率数据不可用。禁止回退到任何内存副本，必须显式报错并停止。"""
+
 
 def _load_commission_rates() -> tuple[dict, dict, dict, str]:
-    """从 references/commission-rates.yaml 加载佣金率和市场税率，失败时 fallback 硬编码默认值。
+    """从 references/commission-rates.yaml 加载佣金率和市场税率。
 
-    Returns:
-        (domestic: dict, crossborder: dict, market_tax: dict, ref_date: str)
+    文件缺失、PyYAML 缺失、解析失败或数据不完整都抛 CommissionRatesError，
+    绝不返回硬编码默认值。
     """
     yaml_path = Path(__file__).parent.parent / "references" / "commission-rates.yaml"
     if not yaml_path.exists():
-        logger.debug("佣金率配置文件不存在，使用硬编码默认值: %s", yaml_path)
-        return dict(_DEFAULT_DOMESTIC_COMMISSION), dict(_DEFAULT_CROSSBORDER_COMMISSION), dict(_DEFAULT_MARKET_TAX), _DEFAULT_REF_DATE
-
+        raise CommissionRatesError(f"费率文件不存在: {yaml_path}")
     try:
         import yaml
+    except ImportError as e:
+        raise CommissionRatesError(f"缺少 PyYAML 依赖，无法读取费率文件: {e}") from e
+    try:
         with open(yaml_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         if not isinstance(data, dict):
             raise ValueError("YAML 根不是字典")
-        domestic = data.get("domestic", {})
-        crossborder = data.get("crossborder", {})
-        market_tax = data.get("market_tax", {})
-        ref_date = data.get("ref_date", _DEFAULT_REF_DATE)
-
-        # 转换 1688 键名（YAML 中为字符串 "1688"）
-        if "1688" in domestic:
-            domestic["1688"] = float(domestic["1688"])
-
-        # 确保所有值都是 float
-        domestic = {str(k): float(v) for k, v in domestic.items()}
-        crossborder = {str(k): float(v) for k, v in crossborder.items()}
-        market_tax = {str(k): float(v) for k, v in market_tax.items()}
-
-        if not domestic or not crossborder:
-            logger.warning("佣金率配置文件数据不完整，使用硬编码默认值")
-            return dict(_DEFAULT_DOMESTIC_COMMISSION), dict(_DEFAULT_CROSSBORDER_COMMISSION), dict(_DEFAULT_MARKET_TAX), _DEFAULT_REF_DATE
-
-        logger.debug("从 YAML 加载佣金率/税率成功: %s", yaml_path)
-        return domestic, crossborder, market_tax, str(ref_date)
+        domestic = {str(k): float(v) for k, v in data.get("domestic", {}).items()}
+        crossborder = {str(k): float(v) for k, v in data.get("crossborder", {}).items()}
+        market_tax = {str(k): float(v) for k, v in data.get("market_tax", {}).items()}
+        ref_date = str(data.get("ref_date", ""))
     except Exception as e:
-        logger.warning("佣金率配置文件加载失败 (%s)，使用硬编码默认值", e)
-        return dict(_DEFAULT_DOMESTIC_COMMISSION), dict(_DEFAULT_CROSSBORDER_COMMISSION), dict(_DEFAULT_MARKET_TAX), _DEFAULT_REF_DATE
+        raise CommissionRatesError(f"费率文件解析失败: {e}") from e
+    if not domestic or not crossborder or not market_tax or not ref_date:
+        raise CommissionRatesError(
+            f"费率文件数据不完整: {yaml_path}（需含 domestic / crossborder / market_tax / ref_date）"
+        )
+    return domestic, crossborder, market_tax, ref_date
 
 
-DOMESTIC_COMMISSION, CROSSBORDER_COMMISSION, MARKET_TAX, COMMISSION_REF_DATE = _load_commission_rates()
+try:
+    DOMESTIC_COMMISSION, CROSSBORDER_COMMISSION, MARKET_TAX, COMMISSION_REF_DATE = _load_commission_rates()
+    _RATES_ERROR = None
+except CommissionRatesError as e:
+    DOMESTIC_COMMISSION, CROSSBORDER_COMMISSION, MARKET_TAX = {}, {}, {}
+    COMMISSION_REF_DATE = ""
+    _RATES_ERROR = str(e)
 
 
-def check_commission_staleness() -> list[str]:
-    """检查佣金率是否过期，返回警告列表"""
+def _check_rates_or_raise():
+    if _RATES_ERROR is not None:
+        raise CommissionRatesError(
+            f"{_RATES_ERROR}；请安装 PyYAML 并确认 references/commission-rates.yaml 完整，"
+            "禁止在无费率数据的情况下出报告"
+        )
+
+
+def check_commission_staleness(today=None) -> list[str]:
+    """检查佣金率是否过期，返回警告列表。today 可注入以便测试不依赖当前日期。"""
     warnings = []
     try:
         ref = datetime.strptime(COMMISSION_REF_DATE, "%Y-%m")
-        now = datetime.now()
+        now = today or datetime.now()
         months = (now.year - ref.year) * 12 + (now.month - ref.month)
         if months > _COMMISSION_STALENESS_MONTHS:
             warnings.append(
@@ -112,9 +110,8 @@ def check_commission_staleness() -> list[str]:
         pass
     return warnings
 
-# MARKET_TAX 已由 _load_commission_rates() 从 commission-rates.yaml 加载，
-# 不再在此处硬编码。不指定 --tax-rate 时由 market 参数自动推断。
-
+# MARKET_TAX 由 _load_commission_rates() 从 commission-rates.yaml 加载。
+# 不指定 --tax-rate 时由 market 参数从该表推断。
 
 # ── 敏感度分析工具 ──
 
@@ -203,10 +200,14 @@ def calc_domestic(purchase_price, selling_price, shipping=0, commission_rate=Non
         raise ValueError("售价不能为负数")
     if shipping < 0:
         raise ValueError("运费不能为负数")
+    _check_rates_or_raise()
     if commission_rate is None and platform:
-        commission_rate = DOMESTIC_COMMISSION.get(platform.lower(), 0.05)
+        key = platform.lower()
+        if key not in DOMESTIC_COMMISSION:
+            raise ValueError(f"未知平台 {platform!r}，可用平台: {', '.join(sorted(DOMESTIC_COMMISSION))}")
+        commission_rate = DOMESTIC_COMMISSION[key]
     elif commission_rate is None:
-        commission_rate = 0.05
+        commission_rate = _UNSPECIFIED_DOMESTIC_RATE
 
     commission = selling_price * commission_rate
     total_cost = purchase_price + shipping + commission
@@ -315,15 +316,22 @@ def calc_crossborder(
     if tax_rate is not None and not (0 <= tax_rate < 1):
         raise ValueError(f"税率必须在 0-1 之间（如 0.19=19%），当前值: {tax_rate}")
 
+    _check_rates_or_raise()
     # 自动推断佣金率：platform → commission_rate（仅在 commission_rate 未显式指定时生效）
     if commission_rate is None and platform:
-        commission_rate = CROSSBORDER_COMMISSION.get(platform.lower(), 0.15)
+        key = platform.lower()
+        if key not in CROSSBORDER_COMMISSION:
+            raise ValueError(f"未知平台 {platform!r}，可用平台: {', '.join(sorted(CROSSBORDER_COMMISSION))}")
+        commission_rate = CROSSBORDER_COMMISSION[key]
     elif commission_rate is None:
-        commission_rate = 0.15
+        commission_rate = _UNSPECIFIED_CROSSBORDER_RATE
 
     # 自动推断税率：market → tax_rate（仅在 tax_rate 未显式指定时生效）
     if tax_rate is None:
-        tax_rate = MARKET_TAX.get(market.upper(), 0.0)
+        key = market.upper()
+        if key not in MARKET_TAX:
+            raise ValueError(f"未知市场 {market!r}，可用市场: {', '.join(sorted(MARKET_TAX))}")
+        tax_rate = MARKET_TAX[key]
 
     purchase_price_usd = purchase_price_cny / exchange_rate
     buffer = purchase_price_usd * exchange_buffer
@@ -526,30 +534,34 @@ def main():
 
     args = parser.parse_args()
 
-    if args.mode == "domestic":
-        result = calc_domestic(
-            purchase_price=args.purchase_price,
-            selling_price=args.selling_price,
-            shipping=args.shipping,
-            commission_rate=args.commission_rate,
-            platform=args.platform,
-        )
-    elif args.mode == "crossborder":
-        result = calc_crossborder(
-            purchase_price_cny=args.purchase_price_cny,
-            exchange_rate=args.exchange_rate,
-            selling_price_usd=args.selling_price_usd,
-            shipping_usd=args.shipping_usd,
-            fba_fee=args.fba_fee,
-            commission_rate=args.commission_rate,
-            tax_rate=args.tax_rate,
-            platform=args.platform,
-            market=args.market,
-            exchange_buffer=args.exchange_buffer,
-        )
-    else:
-        parser.print_help()
-        sys.exit(1)
+    try:
+        if args.mode == "domestic":
+            result = calc_domestic(
+                purchase_price=args.purchase_price,
+                selling_price=args.selling_price,
+                shipping=args.shipping,
+                commission_rate=args.commission_rate,
+                platform=args.platform,
+            )
+        elif args.mode == "crossborder":
+            result = calc_crossborder(
+                purchase_price_cny=args.purchase_price_cny,
+                exchange_rate=args.exchange_rate,
+                selling_price_usd=args.selling_price_usd,
+                shipping_usd=args.shipping_usd,
+                fba_fee=args.fba_fee,
+                commission_rate=args.commission_rate,
+                tax_rate=args.tax_rate,
+                platform=args.platform,
+                market=args.market,
+                exchange_buffer=args.exchange_buffer,
+            )
+        else:
+            parser.print_help()
+            sys.exit(1)
+    except (CommissionRatesError, ValueError) as e:
+        print(f"错误：{e}", file=sys.stderr)
+        sys.exit(2)
 
     print(format_output(result, fmt=args.format))
 
