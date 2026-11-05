@@ -537,7 +537,8 @@ def main():
     dom.add_argument("--selling-price", type=float, required=True, help="售价（元）")
     dom.add_argument("--shipping", type=float, default=0, help="运费（元）")
     dom.add_argument("--commission-rate", type=float, help="平台扣点率（如 0.05=5%%），不指定则根据 --platform 自动设置")
-    dom.add_argument("--platform", choices=["jd", "tmall", "taobao", "pdd", "1688"], help="平台（自动设置扣点率）")
+    dom.add_argument("--platform", choices=sorted(DOMESTIC_COMMISSION) or None,
+                     help="平台（自动设置扣点率；可选值来自 commission-rates.yaml）")
     dom.add_argument("--format", choices=["table", "json"], default="table", help="输出格式")
 
     # 跨境版
@@ -548,7 +549,8 @@ def main():
     cb.add_argument("--shipping-usd", type=float, default=0, help="头程运费（美元）")
     cb.add_argument("--fba-fee", type=float, default=0, help="FBA/平台物流费（美元）")
     cb.add_argument("--commission-rate", type=float, help="平台佣金率（如 0.15=15%%），不指定则根据 --platform 自动设置")
-    cb.add_argument("--platform", choices=["amazon", "shopee", "tiktok", "temu"], help="跨境平台（自动设置佣金率）")
+    cb.add_argument("--platform", choices=sorted(CROSSBORDER_COMMISSION) or None,
+                    help="跨境平台（自动设置佣金率；可选值来自 commission-rates.yaml）")
     cb.add_argument("--exchange-buffer", type=float, default=0.03, help="汇率浮动备用金比例（如 0.03=3%%）")
     cb.add_argument("--tax-rate", type=float, default=None, help="税率（如 0.19=19%% VAT），不指定则根据 --market 自动推断")
     cb.add_argument("--market", default="US", help="目标市场（US/DE/JP/UK）")

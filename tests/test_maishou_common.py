@@ -1,7 +1,6 @@
 """maishou_common.py 单元测试 — format_table / check_env / get_session 等公共函数"""
 import pytest
 import asyncio
-from unittest.mock import patch, AsyncMock
 from maishou_common import format_table, check_env, get_session, close_session
 
 

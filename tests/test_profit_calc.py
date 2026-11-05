@@ -5,7 +5,6 @@ from datetime import datetime
 from profit_calc import (
     calc_domestic, calc_crossborder,
     check_commission_staleness,
-    COMMISSION_REF_DATE,
 )
 
 

@@ -3,7 +3,6 @@ import subprocess
 import json
 import sys
 import os
-import pytest
 
 SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "scripts")
 PROFIT_CALC = os.path.join(SCRIPTS_DIR, "profit_calc.py")

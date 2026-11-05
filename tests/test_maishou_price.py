@@ -1,9 +1,7 @@
 # test_maishou_price.py — 跨境采购比价引擎单元测试
 # 对应审查报告 P1-4: maishou_price.py 零测试覆盖
 import pytest
-import io
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 # conftest.py 已统一 sys.path
 
@@ -42,16 +40,18 @@ class TestFormatCsv:
         output = format_csv(results)
         assert "测试商品" in output
 
-    def test_custom_output_buffer(self):
-        """自定义 buffer 模式不返回字符串"""
+    def test_csv_no_blank_lines(self):
+        """CSV 用 \n 行终止符，Windows 下不产生隔行空行（审查 P1-14 / P2-9）"""
         results = [
             {"title": "测试", "price": "1.0", "platform": "1688", "shop": "", "sales": "10", "url": ""},
         ]
         from maishou_price import format_csv
-        buf = io.StringIO()
-        ret = format_csv(results, output=buf)
-        assert ret == ""
-        assert "测试" in buf.getvalue()
+        out = format_csv(results)
+        lines = out.rstrip("\n").split("\n")
+        assert lines[0].startswith("title,")
+        assert "测试" in out
+        assert "\r\r" not in out
+        assert all(lines), "CSV 内不应出现空行"
 
 
 # ── search_single_source 测试 ──

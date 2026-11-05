@@ -96,18 +96,18 @@ async def search_price(keyword: str, source: int = 0, limit: int = 10, page: int
     return results
 
 
-def format_csv(results: list[dict], output: io.StringIO | None = None) -> str:
-    """格式化 CSV 输出"""
+def format_csv(results: list[dict]) -> str:
+    """格式化 CSV 输出，返回 CSV 文本（\n 行终止符，避免 Windows 隔行空行）"""
     if not results:
         return "未找到结果"
 
-    buf = output or io.StringIO()
+    buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=["title", "price", "platform", "shop", "sales", "url"], lineterminator="\n")
     writer.writeheader()
     for r in results:
         writer.writerow(r)
 
-    return buf.getvalue() if output is None else ""
+    return buf.getvalue()
 
 
 async def main():

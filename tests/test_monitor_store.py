@@ -1,5 +1,4 @@
 """monitor_store.py 单元测试 — 监测数据持久化功能"""
-import json
 import tempfile
 import os
 from pathlib import Path

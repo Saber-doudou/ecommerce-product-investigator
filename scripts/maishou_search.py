@@ -29,7 +29,6 @@ import json
 import yaml
 import asyncio
 import logging
-import aiohttp
 import argparse
 
 logger = logging.getLogger(__name__)
