@@ -153,7 +153,7 @@ class TestSearchPrice:
         """source=0 时并发查询全部平台（4个）"""
         mock_get_session.return_value = mock_session
 
-        async def mock_return(session, keyword, src, limit, page=1):
+        async def mock_return(session, keyword, src, limit, page=1, errors=None):
             return [{"title": f"商品-{src}", "price": "10", "platform": str(src),
                      "url": "", "sales": "10", "shop": f"店-{src}"}]
 
@@ -168,7 +168,7 @@ class TestSearchPrice:
         """并发中某个平台抛异常不阻塞其他平台"""
         mock_get_session.return_value = mock_session
 
-        async def mixed_return(session, keyword, src, limit, page=1):
+        async def mixed_return(session, keyword, src, limit, page=1, errors=None):
             if src == 2:
                 raise RuntimeError("模拟异常")
             return [{"title": f"商品-{src}", "price": "10", "platform": str(src),

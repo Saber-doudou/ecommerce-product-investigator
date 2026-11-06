@@ -197,3 +197,42 @@ class TestDetailErrorExit:
                 await maishou_search.main()
         assert exc.value.code == 2
         assert maishou_search._LAST_ERROR == "请求失败"
+
+    @pytest.mark.asyncio
+    async def test_detail_json_error_is_valid_object(self, capsys):
+        """v0.5.9：--format json 出错时 stdout 仍是合法对象（契约：detail 恒对象）"""
+        import json
+        import sys
+        import maishou_search
+        with patch("maishou_search.get_session", new=AsyncMock()), \
+             patch("maishou_search.close_session", new=AsyncMock()), \
+             patch("maishou_search.retry_post",
+                   new=AsyncMock(return_value=({}, "请求失败"))), \
+             patch.object(sys, "argv",
+                          ["maishou_search.py", "detail", "--source", "2", "--id", "1",
+                           "--format", "json"]):
+            with pytest.raises(SystemExit) as exc:
+                await maishou_search.main()
+        assert exc.value.code == 2
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["error"] == "请求失败"
+
+
+class TestStdoutTrailingNewline:
+    """v0.5.9：CSV 输出到 stdout 只保留一个结尾换行"""
+
+    @pytest.mark.asyncio
+    async def test_csv_stdout_single_trailing_newline(self, capsys):
+        import sys
+        import maishou_search
+        with patch("maishou_search.get_session", new=AsyncMock()), \
+             patch("maishou_search.close_session", new=AsyncMock()), \
+             patch("maishou_search.search_api",
+                   new=AsyncMock(return_value=(_MOCK_ITEMS, None))), \
+             patch.object(sys, "argv",
+                          ["maishou_search.py", "search", "--keyword", "蓝牙",
+                           "--format", "csv"]):
+            await maishou_search.main()
+        out = capsys.readouterr().out
+        assert out.endswith("\n") and not out.endswith("\n\n")
+        assert out.count("\n") == len(_MOCK_ITEMS) + 1  # 表头 + 数据行，无空行

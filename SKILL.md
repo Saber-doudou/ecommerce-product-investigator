@@ -1,6 +1,6 @@
 ---
 name: ecommerce-product-investigator
-version: 0.5.8
+version: 0.5.9
 description: 电商选品调研（国内+跨境双模式）。支持京东/淘宝/拼多多/1688/Amazon/Shopee/TikTok Shop/Temu。快速模式/完整调研/单点查询/监测模式。Use when the user asks 这个商品值不值得做 / 选品调研 / 竞品分析 / 帮我比比价 / 算一下利润, or pastes a product URL or ASIN, or needs 国内与跨境 automatic routing by platform domain. 触发词 选品、竞品调研、比价、利润测算、ASIN、BSR。
 agent_created: true
 compatibility: Requires Python 3.11+; aiohttp and PyYAML are needed by the 买手 API scripts only (profit_calc / monitor_store have no third-party deps); network access to appapi.maishou88.com; agent-browser CLI with CDP port 9222 for deep research.
@@ -151,7 +151,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/maishou_price.py" "关键词" --format js
 # --source: 0=综合 1=淘宝 2=京东 3=拼多多 10=1688
 ```
 
-> **JSON 输出契约**：`--format json` 恒为数组；空/错误返回 `[]`，原因走 stderr，错误退出码 2。
+> **JSON 契约**：搜索类恒数组，空/错误 `[]`；detail 恒对象，错误 `{"error":...}`；退出码 2。
 
 > ⚠️ 买手价不是工厂出厂价，利润测算时用买手价 × 0.8 作为采购成本估算。
 

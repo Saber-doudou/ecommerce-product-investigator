@@ -40,17 +40,18 @@ from text_utils import display_width
 
 # 全部平台失败时置为本轮错误原因；部分失败不阻断（退出码仍为 0）。
 _LAST_ERROR = None
-_SOURCE_ERRORS: list[str] = []
 
 
 async def search_single_source(
     session: aiohttp.ClientSession,
-    keyword: str, src: int, limit: int, page: int = 1
+    keyword: str, src: int, limit: int, page: int = 1,
+    errors: list[str] | None = None,
 ) -> list[dict]:
-    """搜索单个平台"""
+    """搜索单个平台（errors 由调用方传入，避免模块级状态跨调用残留）"""
     items, error = await search_api(session, keyword, src, page=page, limit=limit)
     if error:
-        _SOURCE_ERRORS.append(f"{SOURCE_MAP.get(src, src)}: {error}")
+        if errors is not None:
+            errors.append(f"{SOURCE_MAP.get(src, src)}: {error}")
         logger.warning("平台 %s 查询失败: %s", SOURCE_MAP.get(src, src), error)
         return []
 
@@ -80,9 +81,9 @@ async def search_price(keyword: str, source: int = 0, limit: int = 10, page: int
     Returns:
         商品列表 [{"title", "price", "platform", "url", ...}]
     """
-    global _LAST_ERROR, _SOURCE_ERRORS
+    global _LAST_ERROR
     _LAST_ERROR = None
-    _SOURCE_ERRORS = []
+    errors: list[str] = []
     session = await get_session()
 
     if source == 0:
@@ -91,7 +92,7 @@ async def search_price(keyword: str, source: int = 0, limit: int = 10, page: int
         sources = [source]
 
     # 并发查询所有平台
-    tasks = [search_single_source(session, keyword, src, limit, page) for src in sources]
+    tasks = [search_single_source(session, keyword, src, limit, page, errors) for src in sources]
     results_nested = await asyncio.gather(*tasks, return_exceptions=True)
 
     # 展平结果
@@ -100,11 +101,11 @@ async def search_price(keyword: str, source: int = 0, limit: int = 10, page: int
         if isinstance(item, list):
             results.extend(item)
         elif isinstance(item, Exception):
-            _SOURCE_ERRORS.append(str(item))
+            errors.append(str(item))
             logger.warning("并发查询异常: %s", item)
 
-    if len(_SOURCE_ERRORS) >= len(sources):
-        _LAST_ERROR = "; ".join(_SOURCE_ERRORS)
+    if len(errors) >= len(sources):
+        _LAST_ERROR = "; ".join(errors)
         logger.error("全部平台查询失败: %s", _LAST_ERROR)
 
     return results
@@ -165,8 +166,9 @@ async def main():
             output = json.dumps(results, ensure_ascii=False, indent=2)
             print(output)
         elif args.format == "csv":
-            output = format_csv(results)
-            print(output)
+            text = format_csv(results)
+            # 只保证一个结尾换行，避免 CSV 尾部多出空行
+            sys.stdout.write(text if text.endswith("\n") else text + "\n")
 
         # 写入文件
         if args.output:

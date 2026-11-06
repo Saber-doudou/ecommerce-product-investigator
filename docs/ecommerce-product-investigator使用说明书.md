@@ -1,6 +1,6 @@
 # ecommerce-product-investigator 使用说明书
 
-> **技能版本**：v0.5.8（2026-11-07更新）  
+> **技能版本**：v0.5.9（2026-11-07更新）  
 > **技能类型**：AI 驱动的电商商品调研与选品分析工具  
 > **支持模式**：国内电商模式 + 跨境电商模式  
 > **项目地址**：https://github.com/Saber-doudou/ecommerce-product-investigator
@@ -16,7 +16,7 @@
 | **国内电商模式** | 消费者 | 全网比价、参数对比、评价分析、AI购买建议 |
 | **跨境电商模式** | 卖家 | 选品分析、竞品调研、利润测算、市场风险评估 |
 
-**当前版本**：v0.5.8（2026-11-07更新）  
+**当前版本**：v0.5.9（2026-11-07更新）  
 **支持平台**：京东、淘宝、拼多多、闲鱼、1688、Amazon、Shopee、TikTok Shop、Temu
 
 ---
@@ -257,7 +257,7 @@ FBA费：$5.5（标准尺寸小件）
 
 1. **CDP 访问境外网站**：目前尚未验证是否能正常访问 Amazon、Shopee 等，如无法访问会自动降级到 Web Search
 2. **数据精度标注**：我会用 🟢高/🟡中/🟠低/🔴手动 标注数据可靠性
-3. **版本更新**：当前 v0.5.8，使用前请核对 SKILL.md frontmatter 的 version
+3. **版本更新**：当前 v0.5.9，使用前请核对 SKILL.md frontmatter 的 version
 
 ---
 
@@ -301,4 +301,4 @@ FBA费：$5.5（标准尺寸小件）
 ---
 
 *文档生成时间：2026-05-25；版本标注校订：2026-11-07*  
-*基于版本：ecommerce-product-investigator v0.5.8*
+*基于版本：ecommerce-product-investigator v0.5.9*

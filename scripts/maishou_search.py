@@ -118,9 +118,16 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
 
 
 async def detail(id: str, source: int, **kwargs) -> str:
-    """获取商品详情"""
+    """获取商品详情（json 模式恒返回对象，错误时为 {"error": "..."}）"""
     global _LAST_ERROR
     _LAST_ERROR = None
+    fmt = kwargs.get("format", "yaml")
+
+    def _error_text(message: str) -> str:
+        if fmt == "json":
+            return json.dumps({"error": message}, ensure_ascii=False)
+        return f"❌ {message}"
+
     session = await get_session()
 
     params = {
@@ -140,10 +147,10 @@ async def detail(id: str, source: int, **kwargs) -> str:
     )
     if error:
         _LAST_ERROR = error
-        return f"❌ {error}"
+        return _error_text(error)
     if isinstance(data, dict) and data.get("code") not in (None, 200):
         _LAST_ERROR = data.get("message") or "接口返回异常"
-        return f"❌ {_LAST_ERROR}"
+        return _error_text(_LAST_ERROR)
     detail_data = (data.get("data") or {}) if isinstance(data, dict) else {}
 
     # 第二步：获取分享链接（非致命，失败只警告）
@@ -164,7 +171,6 @@ async def detail(id: str, source: int, **kwargs) -> str:
         "商品详情": detail_data,
     }
 
-    fmt = kwargs.get("format", "yaml")
     if fmt == "json":
         return json.dumps(result, ensure_ascii=False, indent=2)
     return yaml.dump(result, allow_unicode=True, sort_keys=False)
@@ -216,7 +222,8 @@ async def main():
         if hasattr(args, "func"):
             kwargs = {k: v for k, v in vars(args).items() if k not in ("func", "output")}
             output_text = str(await args.func(**kwargs))
-            print(output_text)
+            # 只保证一个结尾换行：CSV 自带 \n 时不再被 print 追加成空行
+            sys.stdout.write(output_text if output_text.endswith("\n") else output_text + "\n")
             if getattr(args, "output", None):
                 with open(args.output, "w", encoding="utf-8") as f:
                     f.write(output_text)
