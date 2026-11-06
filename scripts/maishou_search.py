@@ -39,7 +39,7 @@ from maishou_common import (
     DETAIL_URL, TARGET_URL,
     get_invite_code,
     get_session, close_session, check_env, format_table,
-    search_api, retry_post,
+    search_api, retry_post, first_present,
 )
 
 
@@ -99,7 +99,7 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
             display_rows.append({
                 "#": r["idx"],
                 "商品名": r.get("title") or "",
-                "价格": str(r.get("actualPrice") or r.get("originalPrice") or "?"),
+                "价格": str(first_present(r.get("actualPrice"), r.get("originalPrice"), default="?")),
                 "销量": r.get("monthSales"),
                 "店铺": (r.get("shopName") or ""),
             })
@@ -119,6 +119,8 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
 
 async def detail(id: str, source: int, **kwargs) -> str:
     """获取商品详情"""
+    global _LAST_ERROR
+    _LAST_ERROR = None
     session = await get_session()
 
     params = {
@@ -137,9 +139,11 @@ async def detail(id: str, source: int, **kwargs) -> str:
         {**params, "keyword": "", "usageScene": 5},
     )
     if error:
+        _LAST_ERROR = error
         return f"❌ {error}"
     if isinstance(data, dict) and data.get("code") not in (None, 200):
-        return f"❌ {data.get('message') or '接口返回异常'}"
+        _LAST_ERROR = data.get("message") or "接口返回异常"
+        return f"❌ {_LAST_ERROR}"
     detail_data = (data.get("data") or {}) if isinstance(data, dict) else {}
 
     # 第二步：获取分享链接（非致命，失败只警告）
@@ -167,6 +171,8 @@ async def detail(id: str, source: int, **kwargs) -> str:
 
 
 async def main():
+    global _LAST_ERROR
+    _LAST_ERROR = None
     for warning in check_env():
         logger.warning(warning)
     if not get_invite_code():
@@ -214,7 +220,7 @@ async def main():
             if getattr(args, "output", None):
                 with open(args.output, "w", encoding="utf-8") as f:
                     f.write(output_text)
-                print(f"\n📁 结果已保存到: {args.output}")
+                print(f"\n📁 结果已保存到: {args.output}", file=sys.stderr)
         else:
             parser.print_help()
     finally:

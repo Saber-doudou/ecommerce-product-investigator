@@ -2,9 +2,9 @@
 
 > 📖 **本文面向人类读者**。Agent 一律以 `SKILL.md` 为唯一操作依据；本文命令示例与 `SKILL.md` 同源，若不一致以 `SKILL.md` 为准。
 
-![Tests](https://img.shields.io/badge/tests-148%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-153%20passed-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Version](https://img.shields.io/badge/version-0.5.7-orange)
+![Version](https://img.shields.io/badge/version-0.5.8-orange)
 
 电商平台商品调研与选品分析工具（**国内电商 + 跨境电商双模式**）。
 
@@ -90,7 +90,7 @@ https://item.taobao.com/item.htm?id=123456789」
    │   ├── api-limits.md             # API 限流规则与状态码处理
    │   ├── commission-rates.yaml     # 佣金率数据（可直接编辑）
    │   └── changelog-archive.md      # 历史版本归档
-   └── tests/                        # 148 个测试用例
+   └── tests/                        # 153 个测试用例
    ```
 
 2. 安装依赖（如需使用脚本）：
@@ -220,6 +220,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/monitor_store.py" list
 
 | 版本 | 日期 | 核心变更 |
 |:---:|:---|:---|
+| **0.5.8** | 2026-11-07 | 第四轮复审 P3 收口：价格脚本零销量/零价格保真、全平台失败退出码 2、detail 错误可观测、状态跨调用重置；测试 153，自检 78 |
 | **0.5.7** | 2026-11-06 | 第三轮复审 P3 收口：零销量不再被吞、尾注日期对齐、API 错误时 ERROR 日志 + 退出码 2 且有 caplog 守护；148 passed / 78 项自检 |
 | **0.5.6** | 2026-11-06 | 独立复审小补丁：修 __version__ 正则回归与 CDP 表格、收 5 项文档与显示层残留、JSON 输出恒为数组；自检 78 项全绿 |
 | **0.5.5** | 2026-11-05 | 严格审查 46 项逐条销账补漏：platform choices 改由 YAML 动态生成、全仓未使用导入清零、format_csv 去死参数；自检 75 项全绿 |
@@ -259,4 +260,4 @@ MIT License
 
 ---
 
-*Last updated: 2026-11-06 (v0.5.7)*
+*Last updated: 2026-11-07 (v0.5.8)*

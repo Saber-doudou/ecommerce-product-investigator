@@ -129,6 +129,17 @@ def check_env():
     return warnings
 
 
+def first_present(*values, default=""):
+    """返回第一个非 None 且非空串的值，保留数字 0。
+
+    用于价格/销量等数值字段，避免 `value or fallback` 把 0 当成缺失。
+    """
+    for value in values:
+        if value is not None and value != "":
+            return value
+    return default
+
+
 def format_table(rows: list[dict], columns: dict[str, int]) -> str:
     """
     通用表格格式化（支持中英文混排对齐）

@@ -24,6 +24,7 @@ import csv
 import json
 import asyncio
 import logging
+import sys
 import aiohttp
 import argparse
 
@@ -32,10 +33,14 @@ logger = logging.getLogger(__name__)
 from maishou_common import (
     SOURCE_MAP,
     get_session, close_session, check_env, format_table,
-    search_api,
+    search_api, first_present,
 )
 
 from text_utils import display_width
+
+# 全部平台失败时置为本轮错误原因；部分失败不阻断（退出码仍为 0）。
+_LAST_ERROR = None
+_SOURCE_ERRORS: list[str] = []
 
 
 async def search_single_source(
@@ -45,16 +50,17 @@ async def search_single_source(
     """搜索单个平台"""
     items, error = await search_api(session, keyword, src, page=page, limit=limit)
     if error:
+        _SOURCE_ERRORS.append(f"{SOURCE_MAP.get(src, src)}: {error}")
         logger.warning("平台 %s 查询失败: %s", SOURCE_MAP.get(src, src), error)
         return []
 
     return [
         {
             "title": item.get("title") or "",
-            "price": item.get("actualPrice") or item.get("originalPrice") or "",
+            "price": first_present(item.get("actualPrice"), item.get("originalPrice")),
             "platform": SOURCE_MAP.get(src, f"平台{src}"),
             "url": "",  # API 不直接返回购买链接，需通过 detail 接口获取
-            "sales": item.get("monthSales") or "",
+            "sales": item.get("monthSales"),
             "shop": item.get("shopName") or "",
         }
         for item in items[:limit]
@@ -74,6 +80,9 @@ async def search_price(keyword: str, source: int = 0, limit: int = 10, page: int
     Returns:
         商品列表 [{"title", "price", "platform", "url", ...}]
     """
+    global _LAST_ERROR, _SOURCE_ERRORS
+    _LAST_ERROR = None
+    _SOURCE_ERRORS = []
     session = await get_session()
 
     if source == 0:
@@ -91,7 +100,12 @@ async def search_price(keyword: str, source: int = 0, limit: int = 10, page: int
         if isinstance(item, list):
             results.extend(item)
         elif isinstance(item, Exception):
+            _SOURCE_ERRORS.append(str(item))
             logger.warning("并发查询异常: %s", item)
+
+    if len(_SOURCE_ERRORS) >= len(sources):
+        _LAST_ERROR = "; ".join(_SOURCE_ERRORS)
+        logger.error("全部平台查询失败: %s", _LAST_ERROR)
 
     return results
 
@@ -111,6 +125,8 @@ def format_csv(results: list[dict]) -> str:
 
 
 async def main():
+    global _LAST_ERROR
+    _LAST_ERROR = None
     for warning in check_env():
         logger.warning(warning)
 
@@ -124,9 +140,12 @@ async def main():
         parser.add_argument("--output", help="输出文件路径 (可选)")
         args = parser.parse_args()
 
-        print(f"🔍 搜索: {args.keyword}  (平台={args.source}, 数量={args.limit}, 分页={args.page})")
+        print(f"🔍 搜索: {args.keyword}  (平台={args.source}, 数量={args.limit}, 分页={args.page})", file=sys.stderr)
         results = await search_price(args.keyword, args.source, args.limit, args.page)
-        print(f"✅ 找到 {len(results)} 条结果\n")
+        if _LAST_ERROR:
+            print(f"❌ 查询失败: {_LAST_ERROR}", file=sys.stderr)
+        else:
+            print(f"✅ 找到 {len(results)} 条结果\n", file=sys.stderr)
 
         # 表格输出使用公共 format_table
         def _fmt_table(res):
@@ -158,9 +177,11 @@ async def main():
                     f.write(format_csv(results))
                 else:
                     f.write(_fmt_table(results))
-            print(f"\n📁 结果已保存到: {args.output}")
+            print(f"\n📁 结果已保存到: {args.output}", file=sys.stderr)
     finally:
         await close_session()
+    if _LAST_ERROR:
+        sys.exit(2)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 # test_maishou_price.py — 跨境采购比价引擎单元测试
 # 对应审查报告 P1-4: maishou_price.py 零测试覆盖
+import json
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # conftest.py 已统一 sys.path
 
@@ -178,3 +179,73 @@ class TestSearchPrice:
         # source=0 时查询 4 个平台，京东(src=2)抛异常，其他 3 个正常
         results = await search_price("测试", source=0, limit=10)
         assert len(results) == 3  # 京东异常被捕获，其余 3 平台正常
+
+
+class TestZeroAndErrorBehavior:
+    """v0.5.8：零值保真 + 错误退出码"""
+
+    @pytest.mark.asyncio
+    async def test_zero_sales_and_zero_price_preserved(self):
+        """数字 0 不能被 or 兜底吞掉或回退到原价"""
+        from maishou_price import search_single_source
+        items = [{"title": "零值", "actualPrice": 0, "originalPrice": 10,
+                  "monthSales": 0, "shopName": "店"}]
+        with patch("maishou_price.search_api", new=AsyncMock(return_value=(items, None))):
+            rows = await search_single_source(None, "x", 2, 10)
+        assert rows[0]["price"] == 0
+        assert rows[0]["sales"] == 0
+
+    @pytest.mark.asyncio
+    async def test_all_sources_error_exits_2(self, capsys):
+        """全部平台失败：ERROR 日志 + 退出码 2"""
+        import sys
+        import maishou_price
+        with patch("maishou_price.get_session", new=AsyncMock()), \
+             patch("maishou_price.close_session", new=AsyncMock()), \
+             patch("maishou_price.search_api", new=AsyncMock(return_value=([], "网络超时"))), \
+             patch.object(sys, "argv", ["maishou_price.py", "x", "--format", "json"]):
+            with pytest.raises(SystemExit) as exc:
+                await maishou_price.main()
+        assert exc.value.code == 2
+        assert "网络超时" in maishou_price._LAST_ERROR
+        assert json.loads(capsys.readouterr().out) == []
+
+    @pytest.mark.asyncio
+    async def test_partial_source_error_exits_0(self, capsys):
+        """部分平台失败但仍有结果：不退出 2"""
+        import sys
+        import maishou_price
+
+        async def fake_search_api(session, keyword, src, page=1, limit=0):
+            if src == 1:
+                return ([{"title": "ok", "actualPrice": 5, "monthSales": 1,
+                          "shopName": "店"}], None)
+            return ([], "超时")
+
+        with patch("maishou_price.get_session", new=AsyncMock()), \
+             patch("maishou_price.close_session", new=AsyncMock()), \
+             patch("maishou_price.search_api", side_effect=fake_search_api), \
+             patch.object(sys, "argv", ["maishou_price.py", "x", "--format", "json"]):
+            try:
+                await maishou_price.main()
+            except SystemExit:
+                pytest.fail("部分平台失败不应退出 2")
+        assert maishou_price._LAST_ERROR is None
+        payload = json.loads(capsys.readouterr().out)
+        assert payload[0]["title"] == "ok"
+
+    @pytest.mark.asyncio
+    async def test_main_resets_stale_error(self):
+        """main() 入口必须清掉上一次调用残留的错误状态"""
+        import sys
+        import maishou_price
+        maishou_price._LAST_ERROR = "上一次的旧错误"
+        with patch("maishou_price.get_session", new=AsyncMock()), \
+             patch("maishou_price.close_session", new=AsyncMock()), \
+             patch("maishou_price.search_api", new=AsyncMock(return_value=([], None))), \
+             patch.object(sys, "argv", ["maishou_price.py", "x", "--format", "json"]):
+            try:
+                await maishou_price.main()
+            except SystemExit:
+                pytest.fail("成功查询不应因旧错误退出 2")
+        assert maishou_price._LAST_ERROR is None

@@ -178,3 +178,22 @@ class TestSearchProducts:
                 data = __import__("json").loads(result)
                 assert len(data) == 1
                 assert data[0]["goodsId"] == "1001"
+
+
+class TestDetailErrorExit:
+    """v0.5.8：详情接口错误也必须可观测"""
+
+    @pytest.mark.asyncio
+    async def test_detail_error_exits_2(self):
+        import sys
+        import maishou_search
+        with patch("maishou_search.get_session", new=AsyncMock()), \
+             patch("maishou_search.close_session", new=AsyncMock()), \
+             patch("maishou_search.retry_post",
+                   new=AsyncMock(return_value=({}, "请求失败"))), \
+             patch.object(sys, "argv",
+                          ["maishou_search.py", "detail", "--source", "2", "--id", "1"]):
+            with pytest.raises(SystemExit) as exc:
+                await maishou_search.main()
+        assert exc.value.code == 2
+        assert maishou_search._LAST_ERROR == "请求失败"
