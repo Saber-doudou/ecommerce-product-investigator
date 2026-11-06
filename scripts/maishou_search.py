@@ -29,9 +29,11 @@ import json
 import yaml
 import asyncio
 import logging
+import sys
 import argparse
 
 logger = logging.getLogger(__name__)
+_LAST_ERROR = None
 
 from maishou_common import (
     DETAIL_URL, TARGET_URL,
@@ -43,6 +45,8 @@ from maishou_common import (
 
 async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
     """搜索商品，返回格式化的结果字符串"""
+    global _LAST_ERROR
+    _LAST_ERROR = None
     session = await get_session()
     items, error = await search_api(
         session, keyword, source,
@@ -51,8 +55,9 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
     )
 
     if error:
+        _LAST_ERROR = error
         if kwargs.get("format") == "json":
-            logger.warning("查询失败: %s（JSON 输出恒为数组，错误原因走日志）", error)
+            logger.error("查询失败: %s（JSON 输出恒为数组，错误原因走日志，退出码 2）", error)
             return "[]"
         return f"❌ {error}"
 
@@ -95,7 +100,7 @@ async def search_products(keyword: str, source: int = 0, **kwargs) -> str:
                 "#": r["idx"],
                 "商品名": r.get("title") or "",
                 "价格": str(r.get("actualPrice") or r.get("originalPrice") or "?"),
-                "销量": r.get("monthSales") or "",
+                "销量": r.get("monthSales"),
                 "店铺": (r.get("shopName") or ""),
             })
         return format_table(display_rows, columns)
@@ -214,6 +219,8 @@ async def main():
             parser.print_help()
     finally:
         await close_session()
+    if _LAST_ERROR:
+        sys.exit(2)
 
 
 if __name__ == "__main__":

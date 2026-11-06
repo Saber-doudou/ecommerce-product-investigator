@@ -144,7 +144,7 @@ class TestSearchProducts:
                 assert "查询结果为空" in result or result == "未找到结果"
 
     @pytest.mark.asyncio
-    async def test_empty_result_json(self):
+    async def test_empty_result_json(self, caplog):
         """空结果 JSON 格式"""
         with patch("maishou_search.get_session", new=AsyncMock()):
             with patch("maishou_search.search_api", new=AsyncMock()) as mock_api:
@@ -153,8 +153,11 @@ class TestSearchProducts:
                 assert __import__("json").loads(result) == []
 
                 mock_api.return_value = ([], "网络超时")
-                result = await search_products("蓝牙", format="json")
+                with caplog.at_level("ERROR"):
+                    result = await search_products("蓝牙", format="json")
                 assert __import__("json").loads(result) == []
+                assert any(r.levelname == "ERROR" and "网络超时" in r.getMessage()
+                           for r in caplog.records), "错误原因必须有 ERROR 日志守护"
 
     @pytest.mark.asyncio
     async def test_api_error(self):
