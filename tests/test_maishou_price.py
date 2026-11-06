@@ -249,3 +249,22 @@ class TestZeroAndErrorBehavior:
             except SystemExit:
                 pytest.fail("成功查询不应因旧错误退出 2")
         assert maishou_price._LAST_ERROR is None
+
+
+class TestCsvStdout:
+    """v0.6.0：价格侧 CSV 输出到 stdout 只保留一个结尾换行"""
+
+    @pytest.mark.asyncio
+    async def test_csv_stdout_single_trailing_newline(self, capsys):
+        import sys
+        import maishou_price
+        rows = [{"title": "甲", "actualPrice": "10", "monthSales": 3, "shopName": "店"}]
+        with patch("maishou_price.get_session", new=AsyncMock()), \
+             patch("maishou_price.close_session", new=AsyncMock()), \
+             patch("maishou_price.search_api", new=AsyncMock(return_value=(rows, None))), \
+             patch.object(sys, "argv",
+                          ["maishou_price.py", "x", "--source", "2", "--format", "csv"]):
+            await maishou_price.main()
+        out = capsys.readouterr().out
+        assert out.endswith("\n") and not out.endswith("\n\n")
+        assert out.count("\n") == len(rows) + 1  # 表头 + 数据行，无空行
